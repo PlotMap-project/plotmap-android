@@ -1,9 +1,12 @@
 package com.plotmap.app
+
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +27,7 @@ import com.plotmap.app.feature.auth.AuthScreen
 import com.plotmap.app.feature.editor.creation.CreationChoiceScreen
 import com.plotmap.app.feature.editor.generation.GenerationScreen
 import com.plotmap.app.feature.editor.workspace.EditorScreen
+import com.plotmap.app.feature.editor.workspace.EditorViewModel
 import com.plotmap.app.feature.greeting.GreetingScreen
 import com.plotmap.app.feature.home.HomeProjectItem
 import com.plotmap.app.feature.home.HomeScreen
@@ -34,6 +38,7 @@ import com.plotmap.app.feature.splash.SplashEvent
 import com.plotmap.app.feature.splash.SplashScreen
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
+import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : AppCompatActivity() {
     private val tokenManager: TokenManager by inject()
@@ -109,7 +114,7 @@ fun PlotMapApp(
         }
     }
 
-    androidx.compose.runtime.LaunchedEffect(currentRoute, tokenManager.getToken()) {
+    LaunchedEffect(currentRoute, tokenManager.getToken()) {
         if (currentRoute == Screen.Home.route && !tokenManager.getToken().isNullOrBlank()) {
             refreshProjects()
         }
@@ -230,27 +235,24 @@ fun PlotMapApp(
             CreationChoiceScreen(
                 onCreateProject = { name, description, sourceText, isAiGenerated ->
                     coroutineScope.launch {
-                        val createdProject =
-                            runCatching {
-                                if (isAiGenerated) {
-                                    projectRepository.generateProject(
-                                        title = name,
-                                        description = description,
-                                        text = sourceText,
-                                    )
-                                } else {
-                                    projectRepository.createProject(
-                                        title = name,
-                                        description = description,
-                                    )
-                                }
-                            }.getOrNull()
+                        kotlinx.coroutines.delay(100)
+                        val fakeId = java.util.UUID.randomUUID().toString()
 
-                        if (createdProject != null) {
-                            projects.add(0, createdProject)
-                            navController.navigate(Screen.Editor.createRoute(createdProject.id)) {
-                                popUpTo(Screen.ProjectCreation.route) { inclusive = true }
-                            }
+                        val createdProject =
+                            HomeProjectItem(
+                                id = fakeId,
+                                title = name,
+                                description = description,
+                                isAiGenerated = false,
+                                createdAt = System.currentTimeMillis(),
+                                modifiedAt = System.currentTimeMillis(),
+                            )
+
+                        Log.d("PlotMapNav", "Заглушка: Создан локальный проект с ID: $fakeId")
+
+                        projects.add(0, createdProject)
+                        navController.navigate(Screen.Editor.createRoute(createdProject.id)) {
+                            popUpTo(Screen.ProjectCreation.route) { inclusive = true }
                         }
                     }
                 },
@@ -268,10 +270,11 @@ fun PlotMapApp(
         }
         composable(Screen.Editor.route) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
-            val projectName = projects.firstOrNull { it.id == projectId }?.title ?: projectId
+            val viewModel: EditorViewModel = koinViewModel()
+
             EditorScreen(
-                projectName = projectName,
-                onBack = { navController.popBackStack() },
+                projectId = projectId,
+                viewModel = viewModel,
                 onBackToHome = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Home.route) { inclusive = false }

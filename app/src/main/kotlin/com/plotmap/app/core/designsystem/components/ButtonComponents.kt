@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -29,16 +28,18 @@ fun ActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val shape = RoundedCornerShape(12.dp)
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(4.dp)),
+        modifier = modifier.fillMaxWidth(),
         enabled = enabled,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = containerColor,
                 contentColor = contentColor,
             ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 12.dp),
+        shape = shape,
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Text(text = text)
     }

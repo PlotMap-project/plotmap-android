@@ -14,7 +14,7 @@ val networkModule =
         single {
             val json = Json { ignoreUnknownKeys = true }
             Retrofit.Builder()
-                .baseUrl("https://rude-moments-melt.loca.lt/api/v1/")
+                .baseUrl("https://thirty-mirrors-crash.loca.lt/api/v1/")
                 .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .client(
                     OkHttpClient.Builder()

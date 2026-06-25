@@ -18,7 +18,6 @@ val LocalIsDarkTheme = staticCompositionLocalOf { false }
 val PaperBeige = Color(0xFFFCF5EB)
 val DarkBrownInk = Color(0xFF3D2917)
 val LightOrange = Color(0xFFE9D7CB)
-val GrayOrange = Color(0xFFC4A289)
 val SealingWaxRed = Color(0xFFA83F39)
 val DarkCappuccinoColor = Color(0xFF947158)
 val LightCappuccinoColor = Color(0xFFC4A289)
@@ -45,7 +44,7 @@ private val LightColors =
         onBackground = DarkBrownInk,
         surface = PaperBeige,
         onSurface = DarkBrownInk,
-        surfaceVariant = DarkBrownInk,
+        surfaceVariant = LightOrange,
         onSurfaceVariant = DarkBrownInk,
     )
 

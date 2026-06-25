@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
+import com.plotmap.app.core.designsystem.DarkCappuccinoColor
+import com.plotmap.app.core.designsystem.LightCappuccinoColor
 import com.plotmap.app.core.designsystem.LocalIsDarkTheme
 import com.plotmap.app.core.designsystem.PaperBeige
 
@@ -20,19 +22,41 @@ object NextButton {
         enabled: Boolean = true,
     ) {
         val isDarkTheme = LocalIsDarkTheme.current
+        val shape = RoundedCornerShape(12.dp)
+        val shadowColor = if (isDarkTheme) LightCappuccinoColor else DarkCappuccinoColor
         val textColor =
             when {
                 enabled && isDarkTheme -> PaperBeige
                 enabled -> MaterialTheme.colorScheme.background
-                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                else -> PaperBeige
+            }
+
+        val colors =
+            if (enabled) {
+                plotMapButtonColors()
+            } else {
+                ButtonDefaults.buttonColors(
+                    containerColor = LightCappuccinoColor,
+                    contentColor = PaperBeige,
+                    disabledContainerColor = LightCappuccinoColor,
+                    disabledContentColor = PaperBeige,
+                )
             }
 
         Button(
             onClick = onClick,
-            modifier = modifier.shadow(8.dp, RoundedCornerShape(4.dp)),
+            modifier =
+                modifier.shadow(
+                    elevation = 3.dp,
+                    shape = shape,
+                    ambientColor = shadowColor,
+                    spotColor = shadowColor,
+                    clip = false,
+                ),
             enabled = enabled,
-            colors = plotMapButtonColors(),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 12.dp),
+            colors = colors,
+            shape = shape,
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
         ) {
             Text(text = "Далее", color = textColor)
         }

@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -248,7 +247,7 @@ fun CreationChoiceScreen(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Button(
                         onClick = { filePickerLauncher.launch("text/*") },
-                        modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(12.dp)),
+                        modifier = Modifier.fillMaxWidth(),
                         enabled = !isFileSelected && textContent.isBlank(),
                         colors =
                             ButtonDefaults.buttonColors(
@@ -275,7 +274,7 @@ fun CreationChoiceScreen(
                                     isFileSelected = false
                                     textContent = ""
                                 },
-                                modifier = Modifier.width(100.dp).shadow(8.dp, RoundedCornerShape(12.dp)),
+                                modifier = Modifier.width(100.dp),
                             ) {
                                 Text(
                                     stringResource(R.string.clear),
@@ -298,7 +297,10 @@ fun CreationChoiceScreen(
                 OutlinedTextField(
                     value = textContent,
                     onValueChange = { textContent = it },
-                    modifier = Modifier.fillMaxWidth().height(420.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(420.dp),
                     label = { Text(stringResource(R.string.paste_text_here)) },
                     enabled = !isFileSelected,
                     shape = RoundedCornerShape(18.dp),
