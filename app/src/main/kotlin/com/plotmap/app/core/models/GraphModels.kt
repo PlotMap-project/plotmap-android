@@ -100,14 +100,14 @@ val DEFAULT_TAG_SPECS =
 
 val EVENT_TAG_PALETTE =
     listOf(
-        0xFFCC2244L,
-        0xFFB8860BL,
-        0xFF9B1DCAL,
-        0xFF2E5FAAL,
-        0xFF1E7B45L,
-        0xFFD4278CL,
-        0xFF6B5A8EL,
-        0xFF3E2B7AL,
+        0xFF8E2F40L,
+        0xFF9A7536L,
+        0xFF6E3A86L,
+        0xFF35527EL,
+        0xFF35664BL,
+        0xFF9C3A6EL,
+        0xFF564878L,
+        0xFF3A2C66L,
     )
 
 fun EditorConnectionType.toApiValue(): String =

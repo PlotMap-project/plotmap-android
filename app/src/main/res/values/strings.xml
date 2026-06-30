@@ -27,6 +27,7 @@
     <string name="delete_project">Удалить проект</string>
     <string name="delete_project_confirm">Удалить проект "%s"?</string>
     <string name="save">Сохранить</string>
+    <string name="keyboard_done">Готово</string>
     <string name="cancel">Отмена</string>
     <string name="delete">Удалить</string>
     <string name="welcome">Добро пожаловать!</string>
@@ -64,6 +65,9 @@
     <string name="project_source">Источник проекта</string>
     <string name="upload_file">Добавить источник</string>
     <string name="file_selected">Файл выбран</string>
+    <string name="file_invalid_format">Можно загрузить только файл в формате .txt</string>
+    <string name="file_empty">Файл пуст</string>
+    <string name="file_read_error">Не удалось прочитать файл</string>
     <string name="clear">Очистить</string>
     <string name="or_text">или</string>
     <string name="paste_text_here">Вставьте текст здесь</string>

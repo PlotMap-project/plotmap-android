@@ -52,12 +52,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -73,6 +75,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.plotmap.app.R
+import com.plotmap.app.core.designsystem.components.KeyboardDoneButton
 import com.plotmap.app.core.models.ManuscriptAlign
 import com.plotmap.app.core.models.ManuscriptChapter
 
@@ -195,6 +198,8 @@ private fun ChapterListView(
     onAddChapter: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val focusManager = LocalFocusManager.current
+    var descriptionFocused by remember { mutableStateOf(false) }
     Column(modifier = modifier.fillMaxSize().imePadding()) {
         OutlinedTextField(
             value = title,
@@ -208,7 +213,16 @@ private fun ChapterListView(
             onValueChange = onDescriptionChange,
             label = { Text(stringResource(R.string.manuscript_description_label)) },
             maxLines = 3,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .onFocusChanged { descriptionFocused = it.isFocused },
+        )
+        KeyboardDoneButton(
+            visible = descriptionFocused,
+            onClick = { focusManager.clearFocus() },
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
 
         LazyColumn(
@@ -323,6 +337,8 @@ private fun ChapterEditor(
     modifier: Modifier = Modifier,
 ) {
     var value by remember(chapter.id) { mutableStateOf(TextFieldValue(chapter.text, TextRange(chapter.text.length))) }
+    val focusManager = LocalFocusManager.current
+    var descriptionFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(chapter.id, chapter.text) {
         if (chapter.text != value.text) {
@@ -383,7 +399,16 @@ private fun ChapterEditor(
                     onValueChange = onDescriptionChange,
                     label = { Text(stringResource(R.string.manuscript_description_label)) },
                     maxLines = 3,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .onFocusChanged { descriptionFocused = it.isFocused },
+                )
+                KeyboardDoneButton(
+                    visible = descriptionFocused,
+                    onClick = { focusManager.clearFocus() },
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
         }

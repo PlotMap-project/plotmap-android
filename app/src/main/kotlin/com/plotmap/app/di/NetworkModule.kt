@@ -16,10 +16,9 @@ val networkModule =
         single {
             val json = Json { ignoreUnknownKeys = true }
             Retrofit.Builder()
-                .baseUrl("https://month-supreme-receives-port.trycloudflare.com/api/v1/")
+                .baseUrl("https://harley-voice-enlargement-florida.trycloudflare.com/api/v1/")
                 .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .client(
-
                     OkHttpClient.Builder()
                         .callTimeout(300, TimeUnit.SECONDS)
                         .connectTimeout(30, TimeUnit.SECONDS)
@@ -28,14 +27,14 @@ val networkModule =
                         .addInterceptor(
                             AuthInterceptor(
                                 tokenProvider = { get<TokenManager>().getToken() },
-                            )
+                            ),
                         )
                         .addInterceptor(
                             HttpLoggingInterceptor().apply {
                                 level = HttpLoggingInterceptor.Level.BODY
-                            }
+                            },
                         )
-                        .build()
+                        .build(),
                 )
                 .build()
                 .create(PlotMapApi::class.java)

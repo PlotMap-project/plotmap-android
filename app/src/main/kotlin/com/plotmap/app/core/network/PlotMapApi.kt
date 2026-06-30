@@ -3,6 +3,7 @@ import com.plotmap.app.core.network.dto.AddChapterRequest
 import com.plotmap.app.core.network.dto.AddChapterResponse
 import com.plotmap.app.core.network.dto.ChapterDetailDto
 import com.plotmap.app.core.network.dto.ChapterDto
+import com.plotmap.app.core.network.dto.CreateEventRequest
 import com.plotmap.app.core.network.dto.CreateProjectRequest
 import com.plotmap.app.core.network.dto.EventDto
 import com.plotmap.app.core.network.dto.GenerateProjectRequest
@@ -17,7 +18,6 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
-import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface PlotMapApi {
@@ -85,12 +85,18 @@ interface PlotMapApi {
         @Body request: AddChapterRequest,
     ): AddChapterResponse
 
-    @PUT("projects/{projectId}/chapters/{chapterId}")
+    @PATCH("projects/{projectId}/chapters/{chapterId}")
     suspend fun updateChapter(
         @Path("projectId") projectId: String,
         @Path("chapterId") chapterId: String,
         @Body request: AddChapterRequest,
     ): AddChapterResponse
+
+    @POST("projects/{projectId}/events")
+    suspend fun createEvent(
+        @Path("projectId") projectId: String,
+        @Body request: CreateEventRequest,
+    ): EventDto
 
     @PATCH("projects/{projectId}/events/{eventId}")
     suspend fun updateEvent(

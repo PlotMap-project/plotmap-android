@@ -25,7 +25,6 @@ import com.plotmap.app.core.designsystem.TextMuted
 import com.plotmap.app.core.designsystem.components.AuthFields
 import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 import com.plotmap.app.core.designsystem.components.NextButton
-import com.plotmap.app.core.designsystem.components.PlotMapSecondaryButton
 import org.koin.androidx.compose.koinViewModel
 
 @Composable

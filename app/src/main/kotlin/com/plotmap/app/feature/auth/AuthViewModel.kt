@@ -1,6 +1,7 @@
 package com.plotmap.app.feature.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.plotmap.app.core.coroutines.DispatcherProvider
 import com.plotmap.app.core.data.TokenManager
 import com.plotmap.app.core.network.ApiErrorResponse
 import com.plotmap.app.core.network.AuthResponse
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 
@@ -24,6 +26,7 @@ data class AuthUiState(
 class AuthViewModel(
     private val tokenManager: TokenManager,
     private val plotMapApi: PlotMapApi,
+    private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
     private val _navigationEvent = MutableSharedFlow<AuthEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
@@ -77,7 +80,7 @@ class AuthViewModel(
     ) {
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
-            runCatching { request() }
+            runCatching { withContext(dispatchers.io) { request() } }
                 .onSuccess { response ->
                     tokenManager.saveToken(response.token.trim())
                     tokenManager.saveUserName(response.name)

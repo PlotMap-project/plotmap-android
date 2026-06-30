@@ -1,5 +1,8 @@
 package com.plotmap.app.feature.editor.creation
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
@@ -34,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -44,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.plotmap.app.R
 import com.plotmap.app.core.designsystem.BorderCardViolet
 import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.components.KeyboardDoneButton
 import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 import com.plotmap.app.core.designsystem.components.NextButton
 import com.plotmap.app.core.designsystem.components.PlotMapBackButton
@@ -60,6 +65,9 @@ fun CreationChoiceScreen(
     var projectDescription by remember { mutableStateOf("") }
     var textContent by remember { mutableStateOf("") }
     var isFileSelected by remember { mutableStateOf(false) }
+    var fileError by remember { mutableStateOf<String?>(null) }
+    var descriptionFocused by remember { mutableStateOf(false) }
+    var pasteFocused by remember { mutableStateOf(false) }
     var projectNameInput by remember { mutableStateOf(TextFieldValue(defaultProjectName)) }
 
     val canProceedToGeneration =
@@ -82,17 +90,32 @@ fun CreationChoiceScreen(
     }
 
     val context = LocalContext.current
+    val invalidFormatMessage = stringResource(R.string.file_invalid_format)
+    val emptyFileMessage = stringResource(R.string.file_empty)
+    val readFileErrorMessage = stringResource(R.string.file_read_error)
     val filePickerLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetContent(),
         ) { uri ->
             if (uri != null) {
+                if (!isTxtFile(context, uri)) {
+                    fileError = invalidFormatMessage
+                    return@rememberLauncherForActivityResult
+                }
                 runCatching {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        val content = inputStream.bufferedReader().use { it.readText() }
+                        inputStream.bufferedReader().use { it.readText() }
+                    }
+                }.onSuccess { content ->
+                    if (content.isNullOrBlank()) {
+                        fileError = emptyFileMessage
+                    } else {
                         textContent = content
                         isFileSelected = true
+                        fileError = null
                     }
+                }.onFailure {
+                    fileError = readFileErrorMessage
                 }
             }
         }
@@ -168,13 +191,20 @@ fun CreationChoiceScreen(
                     onValueChange = { newValue ->
                         projectDescription = newValue.take(200)
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { descriptionFocused = it.isFocused },
                     label = { Text(stringResource(R.string.project_description_hint)) },
                     supportingText = {
                         Text(text = "${projectDescription.length}/200")
                     },
                     maxLines = 4,
                     shape = RoundedCornerShape(18.dp),
+                )
+                KeyboardDoneButton(
+                    visible = descriptionFocused,
+                    onClick = { focusManager.clearFocus() },
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -248,7 +278,10 @@ fun CreationChoiceScreen(
 
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Button(
-                            onClick = { filePickerLauncher.launch("text/*") },
+                            onClick = {
+                                fileError = null
+                                filePickerLauncher.launch("text/plain")
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isFileSelected && textContent.isBlank(),
                             colors =
@@ -258,6 +291,14 @@ fun CreationChoiceScreen(
                                 ),
                         ) {
                             Text(stringResource(R.string.upload_file))
+                        }
+                        fileError?.let { message ->
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                         }
                         if (isFileSelected) {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -275,6 +316,7 @@ fun CreationChoiceScreen(
                                     onClick = {
                                         isFileSelected = false
                                         textContent = ""
+                                        fileError = null
                                     },
                                     modifier = Modifier.width(100.dp),
                                 ) {
@@ -302,10 +344,15 @@ fun CreationChoiceScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(420.dp),
+                                .height(420.dp)
+                                .onFocusChanged { pasteFocused = it.isFocused },
                         label = { Text(stringResource(R.string.paste_text_here)) },
                         enabled = !isFileSelected,
                         shape = RoundedCornerShape(18.dp),
+                    )
+                    KeyboardDoneButton(
+                        visible = pasteFocused,
+                        onClick = { focusManager.clearFocus() },
                     )
                 }
             }
@@ -321,3 +368,31 @@ fun CreationChoiceScreen(
         }
     }
 }
+
+private fun isTxtFile(
+    context: Context,
+    uri: Uri,
+): Boolean {
+    val name = queryDisplayName(context, uri)
+    val extension = name?.substringAfterLast('.', "")?.takeIf { name.contains('.') }
+    if (extension != null) return extension.equals("txt", ignoreCase = true)
+    val mimeType = context.contentResolver.getType(uri)
+    return mimeType == null || mimeType == "text/plain"
+}
+
+private fun queryDisplayName(
+    context: Context,
+    uri: Uri,
+): String? =
+    runCatching {
+        context.contentResolver
+            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) cursor.getString(index) else null
+                } else {
+                    null
+                }
+            }
+    }.getOrNull()

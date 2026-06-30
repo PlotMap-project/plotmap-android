@@ -96,6 +96,8 @@ fun EditorScreen(
         viewModel.setMode(mode)
         if (mode == EditorMode.AI_READONLY) {
             viewModel.loadGraph(projectId)
+        } else {
+            viewModel.loadManualGraph(projectId)
         }
     }
 
@@ -217,7 +219,15 @@ fun EditorScreen(
                                             color = MaterialTheme.colorScheme.error,
                                         )
                                         Spacer(modifier = Modifier.height(16.dp))
-                                        Button(onClick = { viewModel.retryLoadGraph(projectId) }) {
+                                        Button(
+                                            onClick = {
+                                                if (isAiReadOnly) {
+                                                    viewModel.retryLoadGraph(projectId)
+                                                } else {
+                                                    viewModel.retryLoadManualGraph(projectId)
+                                                }
+                                            },
+                                        ) {
                                             Text(stringResource(R.string.editor_retry))
                                         }
                                     }
@@ -246,7 +256,9 @@ fun EditorScreen(
                                 else ->
                                     GraphCanvas(
                                         state = state,
-                                        onTransform = { zoom, pan -> viewModel.updateTransform(zoom, pan) },
+                                        onTransform = { zoom, pan, centroid, pivot ->
+                                            viewModel.updateTransform(zoom, pan, centroid, pivot)
+                                        },
                                         onEventDrag = { id, drag -> viewModel.updateEventPosition(id, drag) },
                                         onEventDragEnd = { id -> viewModel.persistEventPosition(projectId, id) },
                                         onEventTap = { event ->
@@ -350,7 +362,7 @@ fun EditorScreen(
             },
             onDelete = { viewModel.deleteEvent(selected.id) },
             onDeleteConnection = { id -> viewModel.deleteConnection(id) },
-            onChangeColor = { color -> viewModel.updateEventColor(selected.id, color) },
+            onChangeColor = { color -> viewModel.updateEventColor(projectId, selected.id, color) },
         )
     }
 
@@ -370,11 +382,30 @@ fun EditorScreen(
             onConfirm = { title, shortDescription, description, impact, eventDate, characterIds, tagIds ->
                 val editing = editingEvent
                 if (editing == null) {
-                    viewModel.addEvent(title, shortDescription, description, impact, eventDate, characterIds, tagIds, null)
-                    viewModel.autoLayout(density)
+                    viewModel.addEvent(
+                        projectId,
+                        title,
+                        shortDescription,
+                        description,
+                        impact,
+                        eventDate,
+                        characterIds,
+                        tagIds,
+                        density,
+                    )
                 } else {
-                    viewModel.updateEvent(editing.id, title, shortDescription, description, impact, eventDate, characterIds, tagIds)
-                    viewModel.autoLayout(density)
+                    viewModel.updateEvent(
+                        projectId,
+                        editing.id,
+                        title,
+                        shortDescription,
+                        description,
+                        impact,
+                        eventDate,
+                        characterIds,
+                        tagIds,
+                        density,
+                    )
                 }
                 showEventDialog = false
                 editingEvent = null
@@ -499,18 +530,16 @@ private fun EventActionDialog(
                         }
                     }
                 }
-                if (isAiReadOnly) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.event_action_change_color),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    EventColorPalette(
-                        selectedColor = event.colorArgb,
-                        onSelect = onChangeColor,
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.event_action_change_color),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                EventColorPalette(
+                    selectedColor = event.colorArgb,
+                    onSelect = onChangeColor,
+                )
             }
         },
         confirmButton = {

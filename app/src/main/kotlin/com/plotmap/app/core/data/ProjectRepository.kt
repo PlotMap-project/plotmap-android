@@ -1,7 +1,9 @@
 package com.plotmap.app.core.data
 
 import androidx.compose.ui.geometry.Offset
+import com.plotmap.app.core.coroutines.DispatcherProvider
 import com.plotmap.app.core.models.EVENT_SHORT_DESCRIPTION_MAX
+import com.plotmap.app.core.models.EVENT_TAG_PALETTE
 import com.plotmap.app.core.models.EditorCharacter
 import com.plotmap.app.core.models.EditorConnection
 import com.plotmap.app.core.models.EditorEvent
@@ -13,6 +15,7 @@ import com.plotmap.app.core.network.PlotMapApi
 import com.plotmap.app.core.network.dto.AddChapterRequest
 import com.plotmap.app.core.network.dto.CharacterDto
 import com.plotmap.app.core.network.dto.ConnectionDto
+import com.plotmap.app.core.network.dto.CreateEventRequest
 import com.plotmap.app.core.network.dto.CreateProjectRequest
 import com.plotmap.app.core.network.dto.EventDto
 import com.plotmap.app.core.network.dto.GenerateProjectRequest
@@ -22,6 +25,7 @@ import com.plotmap.app.core.network.dto.UpdateEventRequest
 import com.plotmap.app.core.network.dto.UpdateProjectRequest
 import com.plotmap.app.feature.home.HomeProjectItem
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.util.UUID
 
@@ -36,132 +40,230 @@ class GenerationFailedException(
 
 class ProjectRepository(
     private val plotMapApi: PlotMapApi,
+    private val dispatchers: DispatcherProvider,
 ) {
     suspend fun loadProjects(): List<HomeProjectItem> =
-        plotMapApi.getProjects().map { response ->
-            response.toHomeProjectItem()
+        withContext(dispatchers.io) {
+            plotMapApi.getProjects().map { response ->
+                response.toHomeProjectItem()
+            }
         }
 
     suspend fun renameProject(
         projectId: String,
         title: String,
     ): HomeProjectItem =
-        plotMapApi.updateProject(
-            id = projectId,
-            request = UpdateProjectRequest(title = title),
-        ).toHomeProjectItem()
+        withContext(dispatchers.io) {
+            plotMapApi.updateProject(
+                id = projectId,
+                request = UpdateProjectRequest(title = title),
+            ).toHomeProjectItem()
+        }
 
     suspend fun deleteProject(projectId: String) {
-        plotMapApi.deleteProject(projectId)
+        withContext(dispatchers.io) {
+            plotMapApi.deleteProject(projectId)
+        }
     }
 
     suspend fun createProject(
         title: String,
         description: String,
     ): HomeProjectItem =
-        plotMapApi.createProject(
-            CreateProjectRequest(
-                title = title,
-                description = description,
-            ),
-        ).toHomeProjectItem()
+        withContext(dispatchers.io) {
+            plotMapApi.createProject(
+                CreateProjectRequest(
+                    title = title,
+                    description = description,
+                ),
+            ).toHomeProjectItem()
+        }
 
     suspend fun generateGraph(
         title: String,
         description: String,
         text: String,
-    ): EditorGraph {
-        val job =
-            plotMapApi.generateProject(
-                GenerateProjectRequest(
-                    name = title,
-                    description = description,
-                    text = text,
-                ),
-            )
-        val completed = awaitJobCompletion(job.jobId)
-        return loadGraph(completed.projectId)
-    }
+    ): EditorGraph =
+        withContext(dispatchers.io) {
+            val job =
+                plotMapApi.generateProject(
+                    GenerateProjectRequest(
+                        name = title,
+                        description = description,
+                        text = text,
+                    ),
+                )
+            val completed = awaitJobCompletion(job.jobId)
+            loadGraph(completed.projectId)
+        }
 
     suspend fun loadChapters(projectId: String): List<ManuscriptChapter> =
-        plotMapApi.getChapters(projectId)
-            .sortedBy { it.chapterOrder }
-            .map { dto ->
-                ManuscriptChapter(
-                    id = dto.id,
-                    order = dto.chapterOrder,
-                    title = dto.title,
-                    locked = true,
-                    loaded = false,
-                    serverBacked = true,
-                )
-            }
+        withContext(dispatchers.io) {
+            plotMapApi.getChapters(projectId)
+                .sortedBy { it.chapterOrder }
+                .map { dto ->
+                    ManuscriptChapter(
+                        id = dto.id,
+                        order = dto.chapterOrder,
+                        title = dto.title,
+                        locked = true,
+                        loaded = false,
+                        serverBacked = true,
+                    )
+                }
+        }
 
     suspend fun loadChapterText(
         projectId: String,
         chapterId: String,
-    ): ManuscriptChapter {
-        val dto = plotMapApi.getChapterById(projectId, chapterId)
-        return ManuscriptChapter(
-            id = dto.id,
-            order = dto.chapterOrder,
-            title = dto.title,
-            text = dto.text,
-            bold = List(dto.text.length) { false },
-            italic = List(dto.text.length) { false },
-            locked = true,
-            loaded = true,
-            serverBacked = true,
-        )
-    }
+    ): ManuscriptChapter =
+        withContext(dispatchers.io) {
+            val dto = plotMapApi.getChapterById(projectId, chapterId)
+            ManuscriptChapter(
+                id = dto.id,
+                order = dto.chapterOrder,
+                title = dto.title,
+                text = dto.text,
+                bold = List(dto.text.length) { false },
+                italic = List(dto.text.length) { false },
+                locked = true,
+                loaded = true,
+                serverBacked = true,
+            )
+        }
 
     suspend fun addChapter(
         projectId: String,
         text: String,
         title: String?,
-    ): String {
-        val response = plotMapApi.addChapter(projectId, AddChapterRequest(title = title, text = text))
-        return response.job.jobId
-    }
+    ): String =
+        withContext(dispatchers.io) {
+            plotMapApi.addChapter(projectId, AddChapterRequest(title = title, text = text)).job.jobId
+        }
 
     suspend fun updateChapter(
         projectId: String,
         chapterId: String,
         text: String,
         title: String?,
-    ): String {
-        val response = plotMapApi.updateChapter(projectId, chapterId, AddChapterRequest(title = title, text = text))
-        return response.job.jobId
-    }
-
-    suspend fun awaitJobCompletion(jobId: String): JobStatusResponse {
-        repeat(GENERATION_MAX_POLLS) {
-            val job = plotMapApi.getJobStatus(jobId)
-            when (job.status.trim().uppercase()) {
-                JOB_STATUS_COMPLETED -> return job
-                JOB_STATUS_FAILED -> throw GenerationFailedException(job.errorMessage)
-                else -> delay(GENERATION_POLL_INTERVAL_MS)
-            }
+    ): String =
+        withContext(dispatchers.io) {
+            plotMapApi.updateChapter(projectId, chapterId, AddChapterRequest(title = title, text = text)).job.jobId
         }
-        throw GenerationFailedException(null)
-    }
 
-    suspend fun loadGraph(projectId: String): EditorGraph = plotMapApi.getProjectDetails(projectId).toEditorGraph()
+    suspend fun awaitJobCompletion(jobId: String): JobStatusResponse =
+        withContext(dispatchers.io) {
+            repeat(GENERATION_MAX_POLLS) {
+                val job = plotMapApi.getJobStatus(jobId)
+                when (job.status.trim().uppercase()) {
+                    JOB_STATUS_COMPLETED -> return@withContext job
+                    JOB_STATUS_FAILED -> throw GenerationFailedException(job.errorMessage)
+                    else -> delay(GENERATION_POLL_INTERVAL_MS)
+                }
+            }
+            throw GenerationFailedException(null)
+        }
+
+    suspend fun loadGraph(projectId: String): EditorGraph =
+        withContext(dispatchers.io) {
+            plotMapApi.getProjectDetails(projectId).toEditorGraph()
+        }
 
     suspend fun saveEventPosition(
         projectId: String,
         eventId: String,
         position: Offset,
     ) {
-        plotMapApi.updateEvent(
-            projectId = projectId,
-            eventId = eventId,
-            request =
-                UpdateEventRequest(
-                    customPositionX = position.x.toDouble(),
-                    customPositionY = position.y.toDouble(),
-                ),
-        )
+        withContext(dispatchers.io) {
+            plotMapApi.updateEvent(
+                projectId = projectId,
+                eventId = eventId,
+                request =
+                    UpdateEventRequest(
+                        customPositionX = position.x.toDouble(),
+                        customPositionY = position.y.toDouble(),
+                    ),
+            )
+        }
+    }
+
+    suspend fun createEvent(
+        projectId: String,
+        event: EditorEvent,
+    ): String =
+        withContext(dispatchers.io) {
+            plotMapApi.createEvent(
+                projectId = projectId,
+                request =
+                    CreateEventRequest(
+                        title = event.title,
+                        description = event.description,
+                        impactLevel = event.impactLevel,
+                        level = event.level,
+                        orderInLevel = event.orderInLevel,
+                        customPositionX = event.position?.x?.toDouble(),
+                        customPositionY = event.position?.y?.toDouble(),
+                        color = argbToHex(event.colorArgb),
+                        characterIds = event.characterIds,
+                        tagIds = event.tagIds,
+                    ),
+            ).id
+        }
+
+    suspend fun saveEventColor(
+        projectId: String,
+        eventId: String,
+        colorArgb: Long?,
+    ) {
+        withContext(dispatchers.io) {
+            plotMapApi.updateEvent(
+                projectId = projectId,
+                eventId = eventId,
+                request = UpdateEventRequest(color = argbToHex(colorArgb) ?: ""),
+            )
+        }
+    }
+
+    suspend fun saveEventLayout(
+        projectId: String,
+        eventId: String,
+        level: Int?,
+        orderInLevel: Int?,
+        position: Offset?,
+    ) {
+        withContext(dispatchers.io) {
+            plotMapApi.updateEvent(
+                projectId = projectId,
+                eventId = eventId,
+                request =
+                    UpdateEventRequest(
+                        level = level,
+                        orderInLevel = orderInLevel,
+                        customPositionX = position?.x?.toDouble(),
+                        customPositionY = position?.y?.toDouble(),
+                    ),
+            )
+        }
+    }
+
+    suspend fun saveEventContent(
+        projectId: String,
+        event: EditorEvent,
+    ) {
+        withContext(dispatchers.io) {
+            plotMapApi.updateEvent(
+                projectId = projectId,
+                eventId = event.id,
+                request =
+                    UpdateEventRequest(
+                        title = event.title,
+                        description = event.description,
+                        impactLevel = event.impactLevel,
+                        characterIds = event.characterIds,
+                        tagIds = event.tagIds,
+                    ),
+            )
+        }
     }
 
     private fun GraphResponse.toEditorGraph(): EditorGraph =
@@ -184,6 +286,8 @@ class ProjectRepository(
             description = description,
             impactLevel = impactLevel,
             characterIds = characterIds,
+            tagIds = tagIds,
+            colorArgb = parseHexColor(color)?.takeIf { it in EVENT_TAG_PALETTE },
             level = level,
             orderInLevel = orderInLevel,
             position = if (hasCustomPosition) Offset(customPositionX!!.toFloat(), customPositionY!!.toFloat()) else null,
@@ -226,5 +330,10 @@ class ProjectRepository(
         val cleaned = hex?.trim()?.removePrefix("#")?.takeIf { it.isNotEmpty() } ?: return null
         val value = cleaned.toLongOrNull(16) ?: return null
         return if (cleaned.length <= 6) value or 0xFF000000L else value
+    }
+
+    private fun argbToHex(colorArgb: Long?): String? {
+        if (colorArgb == null) return null
+        return "#%06X".format(colorArgb and 0xFFFFFFL)
     }
 }

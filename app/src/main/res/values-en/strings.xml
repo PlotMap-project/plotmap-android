@@ -27,6 +27,7 @@
     <string name="delete_project">Delete Project</string>
     <string name="delete_project_confirm">Delete project "%s"?</string>
     <string name="save">Save</string>
+    <string name="keyboard_done">Done</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
     <string name="welcome">Welcome!</string>
@@ -64,6 +65,9 @@
     <string name="project_source">Project Source</string>
     <string name="upload_file">Add Source</string>
     <string name="file_selected">File selected</string>
+    <string name="file_invalid_format">Only .txt files can be uploaded</string>
+    <string name="file_empty">The file is empty</string>
+    <string name="file_read_error">Could not read the file</string>
     <string name="clear">Clear</string>
     <string name="or_text">or</string>
     <string name="paste_text_here">Paste text here</string>

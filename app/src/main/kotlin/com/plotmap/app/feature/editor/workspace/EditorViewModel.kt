@@ -65,6 +65,7 @@ class EditorViewModel(
     private var graphRequested = false
     private val savedChapterIds = mutableSetOf<String>()
     private val dirtyChapterIds = mutableSetOf<String>()
+    private val persistedEventIds = mutableSetOf<String>()
 
     fun setMode(mode: EditorMode) {
         _uiState.update { it.copy(mode = mode) }
@@ -81,6 +82,8 @@ class EditorViewModel(
                 graph to chapters
             }
                 .onSuccess { (graph, chapters) ->
+                    persistedEventIds.clear()
+                    persistedEventIds.addAll(graph.events.map { event -> event.id })
                     _uiState.update {
                         it.copy(
                             mode = EditorMode.AI_READONLY,
@@ -105,6 +108,36 @@ class EditorViewModel(
     fun retryLoadGraph(projectId: String) {
         graphRequested = false
         loadGraph(projectId)
+    }
+
+    fun loadManualGraph(projectId: String) {
+        if (graphRequested) return
+        graphRequested = true
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadError = null) }
+            runCatching { projectRepository.loadGraph(projectId) }
+                .onSuccess { graph ->
+                    persistedEventIds.clear()
+                    persistedEventIds.addAll(graph.events.map { event -> event.id })
+                    _uiState.update {
+                        it.copy(
+                            events = graph.events,
+                            connections = graph.connections,
+                            characters = graph.characters,
+                            isLoading = false,
+                            loadError = null,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { it.copy(isLoading = false, loadError = throwable.message) }
+                }
+        }
+    }
+
+    fun retryLoadManualGraph(projectId: String) {
+        graphRequested = false
+        loadManualGraph(projectId)
     }
 
     fun initTags(defaults: List<EventTag>) {
@@ -267,6 +300,8 @@ class EditorViewModel(
                 projectRepository.loadGraph(projectId)
             }
                 .onSuccess { graph ->
+                    persistedEventIds.clear()
+                    persistedEventIds.addAll(graph.events.map { event -> event.id })
                     _uiState.update {
                         it.copy(
                             events = graph.events,
@@ -317,6 +352,7 @@ class EditorViewModel(
     }
 
     fun addEvent(
+        projectId: String,
         title: String,
         shortDescription: String,
         description: String,
@@ -324,7 +360,7 @@ class EditorViewModel(
         eventDate: String,
         characterIds: List<String>,
         tagIds: List<String>,
-        position: Offset?,
+        density: Density,
     ) {
         val newEvent =
             EditorEvent(
@@ -335,12 +371,17 @@ class EditorViewModel(
                 eventDate = eventDate,
                 characterIds = characterIds,
                 tagIds = tagIds,
-                position = position,
+                position = null,
             )
         _uiState.update { it.copy(events = it.events + newEvent) }
+        autoLayout(density)
+        if (_uiState.value.mode == EditorMode.MANUAL) {
+            persistNewEvent(projectId, newEvent.id)
+        }
     }
 
     fun updateEvent(
+        projectId: String,
         id: String,
         title: String,
         shortDescription: String,
@@ -349,6 +390,7 @@ class EditorViewModel(
         eventDate: String,
         characterIds: List<String>,
         tagIds: List<String>,
+        density: Density,
     ) {
         _uiState.update { state ->
             val updatedEvents =
@@ -372,9 +414,17 @@ class EditorViewModel(
                 selectedEvent = updatedEvents.find { it.id == state.selectedEvent?.id },
             )
         }
+        autoLayout(density)
+        if (_uiState.value.mode == EditorMode.MANUAL && id in persistedEventIds) {
+            _uiState.value.events.find { it.id == id }?.let { event ->
+                viewModelScope.launch { runCatching { projectRepository.saveEventContent(projectId, event) } }
+            }
+            persistManualLayout(projectId, excludeId = null)
+        }
     }
 
     fun updateEventColor(
+        projectId: String,
         id: String,
         colorArgb: Long?,
     ) {
@@ -386,6 +436,51 @@ class EditorViewModel(
                 selectedEvent = updatedEvents.find { it.id == state.selectedEvent?.id },
             )
         }
+        if (id in persistedEventIds) {
+            viewModelScope.launch { runCatching { projectRepository.saveEventColor(projectId, id, colorArgb) } }
+        }
+    }
+
+    private fun persistNewEvent(
+        projectId: String,
+        tempId: String,
+    ) {
+        val event = _uiState.value.events.find { it.id == tempId } ?: return
+        viewModelScope.launch {
+            runCatching { projectRepository.createEvent(projectId, event) }
+                .onSuccess { serverId ->
+                    persistedEventIds.add(serverId)
+                    _uiState.update { state ->
+                        state.copy(
+                            events = state.events.map { if (it.id == tempId) it.copy(id = serverId) else it },
+                            selectedEvent =
+                                state.selectedEvent?.let { if (it.id == tempId) it.copy(id = serverId) else it },
+                        )
+                    }
+                    persistManualLayout(projectId, excludeId = null)
+                }
+        }
+    }
+
+    private fun persistManualLayout(
+        projectId: String,
+        excludeId: String?,
+    ) {
+        _uiState.value.events
+            .filter { it.id in persistedEventIds && it.id != excludeId }
+            .forEach { event ->
+                viewModelScope.launch {
+                    runCatching {
+                        projectRepository.saveEventLayout(
+                            projectId = projectId,
+                            eventId = event.id,
+                            level = event.level,
+                            orderInLevel = event.orderInLevel,
+                            position = event.position,
+                        )
+                    }
+                }
+            }
     }
 
     fun updateConnectionColor(
@@ -424,6 +519,7 @@ class EditorViewModel(
         projectId: String,
         eventId: String,
     ) {
+        if (eventId !in persistedEventIds) return
         val position = _uiState.value.events.find { it.id == eventId }?.position ?: return
         viewModelScope.launch {
             runCatching { projectRepository.saveEventPosition(projectId, eventId, position) }
@@ -549,11 +645,16 @@ class EditorViewModel(
     fun updateTransform(
         zoomDelta: Float,
         panDelta: Offset,
+        centroid: Offset,
+        pivot: Offset,
     ) {
         _uiState.update { state ->
+            val newScale = (state.scale * zoomDelta).coerceIn(state.minScale, state.maxScale)
+            val appliedZoom = newScale / state.scale
+            val focal = centroid - pivot
             state.copy(
-                scale = (state.scale * zoomDelta).coerceIn(state.minScale, state.maxScale),
-                offset = state.offset + panDelta,
+                scale = newScale,
+                offset = focal * (1f - appliedZoom) + state.offset * appliedZoom + panDelta,
             )
         }
     }
@@ -577,10 +678,10 @@ class EditorViewModel(
 
             val manualEvents = state.events.filter { it.isManuallyPositioned }
             val autoEvents = state.events.filter { !it.isManuallyPositioned }
-            val usesLevel = autoEvents.any { it.level != null }
+            val orderByDate = state.mode == EditorMode.MANUAL
 
             val layers: List<List<EditorEvent>> =
-                if (usesLevel) {
+                if (!orderByDate) {
                     autoEvents
                         .groupBy { it.level ?: Int.MAX_VALUE }
                         .toSortedMap()
@@ -606,6 +707,8 @@ class EditorViewModel(
                                     x = startX + colIndex * stepX,
                                     y = startY + layerIndex * stepY,
                                 ),
+                            level = if (orderByDate) layerIndex else event.level,
+                            orderInLevel = if (orderByDate) colIndex else event.orderInLevel,
                         )
                 }
             }

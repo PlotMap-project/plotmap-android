@@ -1,5 +1,6 @@
 package com.plotmap.app.feature.editor.generation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.plotmap.app.core.data.GenerationFailedException
@@ -7,7 +8,7 @@ import com.plotmap.app.core.data.ProjectRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import android.util.Log
+
 sealed interface GenerationUiState {
     data object Loading : GenerationUiState
 
@@ -33,13 +34,14 @@ class GenerationViewModel(
                 .onSuccess { graph -> _uiState.value = GenerationUiState.Success(graph.projectId) }
                 .onFailure { throwable ->
                     Log.e("GenerationVM", "Ошибка при генерации графа", throwable)
-                    val errorMessage = when (throwable) {
-                        is GenerationFailedException -> throwable.reason
-                        is retrofit2.HttpException -> {
-                            throwable.response()?.errorBody()?.string() ?: throwable.message
+                    val errorMessage =
+                        when (throwable) {
+                            is GenerationFailedException -> throwable.reason
+                            is retrofit2.HttpException -> {
+                                throwable.response()?.errorBody()?.string() ?: throwable.message
+                            }
+                            else -> throwable.message
                         }
-                        else -> throwable.message
-                    }
 
                     _uiState.value = GenerationUiState.Error(errorMessage)
                 }

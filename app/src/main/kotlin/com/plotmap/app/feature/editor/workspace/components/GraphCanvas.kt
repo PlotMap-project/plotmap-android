@@ -51,7 +51,7 @@ private val NodeMaxSize = 172.dp
 @Composable
 fun GraphCanvas(
     state: EditorUiState,
-    onTransform: (zoom: Float, pan: Offset) -> Unit,
+    onTransform: (zoom: Float, pan: Offset, centroid: Offset, pivot: Offset) -> Unit,
     onEventDrag: (id: String, dragAmount: Offset) -> Unit,
     onEventDragEnd: (id: String) -> Unit,
     onEventTap: (EditorEvent) -> Unit,
@@ -93,6 +93,7 @@ fun GraphCanvas(
                 val fitScaleX = screenW / (graphW * 3f)
                 val fitScaleY = screenH / (graphH * 3f)
                 val fitScale = minOf(fitScaleX, fitScaleY).coerceAtLeast(0.05f)
+                val minScale = (fitScale * 0.25f).coerceAtLeast(0.02f)
                 val maxScale = (minOf(screenW, screenH) / nodeMinPx).coerceAtLeast(fitScale)
 
                 val screenCenterX = screenW / 2f
@@ -103,7 +104,7 @@ fun GraphCanvas(
                         y = (screenCenterY - graphCenterY) * fitScale,
                     )
 
-                onFitToScreen(fitScale, fitOffset, fitScale, maxScale)
+                onFitToScreen(fitScale, fitOffset, minScale, maxScale)
                 fittedToScreen = true
             }
         }
@@ -113,8 +114,8 @@ fun GraphCanvas(
                 Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            onTransform(zoom, pan)
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            onTransform(zoom, pan, centroid, Offset(screenW / 2f, screenH / 2f))
                         }
                     },
         ) {
@@ -157,7 +158,7 @@ fun GraphCanvas(
                         event = event,
                         accent = nodeAccent(event, state),
                         selected = state.selectedEvent?.id == event.id,
-                        onDrag = { dragAmount -> onEventDrag(event.id, dragAmount / state.scale) },
+                        onDrag = { dragAmount -> onEventDrag(event.id, dragAmount) },
                         onDragEnd = { onEventDragEnd(event.id) },
                         onTap = { onEventTap(event) },
                     )

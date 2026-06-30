@@ -70,7 +70,7 @@ data class ChapterDetailDto(
 @Serializable
 data class AddChapterRequest(
     val title: String? = null,
-    val text: String,
+    val text: String? = null,
 )
 
 @Serializable
@@ -82,7 +82,7 @@ data class AddChapterResponse(
 @Serializable
 data class HealthResponse(
     val status: String,
-    val message: String,
+    val message: String? = null,
 )
 
 @Serializable
@@ -94,8 +94,24 @@ data class EventDto(
     val level: Int,
     val orderInLevel: Int,
     val characterIds: List<String> = emptyList(),
+    val tagIds: List<String> = emptyList(),
     val customPositionX: Double? = null,
     val customPositionY: Double? = null,
+    val color: String? = null,
+)
+
+@Serializable
+data class CreateEventRequest(
+    val title: String,
+    val description: String? = null,
+    val impactLevel: Int? = null,
+    val level: Int? = null,
+    val orderInLevel: Int? = null,
+    val customPositionX: Double? = null,
+    val customPositionY: Double? = null,
+    val color: String? = null,
+    val characterIds: List<String>? = null,
+    val tagIds: List<String>? = null,
 )
 
 @Serializable
