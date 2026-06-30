@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -52,7 +53,9 @@ fun GraphCanvas(
     state: EditorUiState,
     onTransform: (zoom: Float, pan: Offset) -> Unit,
     onEventDrag: (id: String, dragAmount: Offset) -> Unit,
+    onEventDragEnd: (id: String) -> Unit,
     onEventTap: (EditorEvent) -> Unit,
+    onEmptyTap: () -> Unit,
     onFitToScreen: (scale: Float, offset: Offset, minScale: Float, maxScale: Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -60,7 +63,7 @@ fun GraphCanvas(
     val connectionColor = MaterialTheme.colorScheme.onSurfaceVariant
     var fittedToScreen by remember { mutableStateOf(false) }
 
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier.clipToBounds()) {
         val screenW = constraints.maxWidth.toFloat()
         val screenH = constraints.maxHeight.toFloat()
         val nodeMinPx = with(density) { NodeMinSize.toPx() }
@@ -124,6 +127,9 @@ fun GraphCanvas(
                             scaleY = state.scale
                             translationX = state.offset.x
                             translationY = state.offset.y
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { onEmptyTap() })
                         },
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -152,6 +158,7 @@ fun GraphCanvas(
                         accent = nodeAccent(event, state),
                         selected = state.selectedEvent?.id == event.id,
                         onDrag = { dragAmount -> onEventDrag(event.id, dragAmount / state.scale) },
+                        onDragEnd = { onEventDragEnd(event.id) },
                         onTap = { onEventTap(event) },
                     )
                 }
@@ -166,6 +173,7 @@ private fun EventNode(
     accent: Color?,
     selected: Boolean,
     onDrag: (Offset) -> Unit,
+    onDragEnd: () -> Unit,
     onTap: () -> Unit,
 ) {
     val position = event.position ?: Offset.Zero
@@ -195,7 +203,7 @@ private fun EventNode(
                     shape = RoundedCornerShape(16.dp),
                 )
                 .pointerInput(event.id) {
-                    detectDragGestures { change, dragAmount ->
+                    detectDragGestures(onDragEnd = { onDragEnd() }) { change, dragAmount ->
                         change.consume()
                         onDrag(dragAmount)
                     }

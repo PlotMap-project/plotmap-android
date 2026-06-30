@@ -14,7 +14,12 @@ import com.plotmap.app.core.models.EditorEvent
 import com.plotmap.app.core.models.EditorMode
 import com.plotmap.app.core.models.EditorTab
 import com.plotmap.app.core.models.EventTag
+import com.plotmap.app.core.models.ManuscriptAlign
+import com.plotmap.app.core.models.ManuscriptChapter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -29,17 +34,78 @@ data class EditorUiState(
     val tags: List<EventTag> = emptyList(),
     val selectedEvent: EditorEvent? = null,
     val connectionSourceId: String? = null,
+    val manuscriptTitle: String = "",
+    val manuscriptDescription: String = "",
+    val chapters: List<ManuscriptChapter> = listOf(ManuscriptChapter()),
+    val openChapterId: String? = null,
+    val isChapterLoading: Boolean = false,
+    val isChapterSaving: Boolean = false,
+    val chapterSaved: Boolean = false,
+    val chapterError: String? = null,
+    val isGraphUpdating: Boolean = false,
+    val graphUpdateError: String? = null,
     val scale: Float = 1.0f,
     val offset: Offset = Offset.Zero,
     val minScale: Float = 0.05f,
     val maxScale: Float = 5f,
+    val isLoading: Boolean = false,
+    val loadError: String? = null,
 )
 
 class EditorViewModel(
     private val projectRepository: ProjectRepository,
+    private val appScope: CoroutineScope,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState = _uiState.asStateFlow()
+
+    private val _exitEvent = MutableSharedFlow<Unit>()
+    val exitEvent = _exitEvent.asSharedFlow()
+
+    private var graphRequested = false
+    private val savedChapterIds = mutableSetOf<String>()
+    private val dirtyChapterIds = mutableSetOf<String>()
+
+    fun setMode(mode: EditorMode) {
+        _uiState.update { it.copy(mode = mode) }
+    }
+
+    fun loadGraph(projectId: String) {
+        if (graphRequested) return
+        graphRequested = true
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadError = null) }
+            runCatching {
+                val graph = projectRepository.loadGraph(projectId)
+                val chapters = projectRepository.loadChapters(projectId)
+                graph to chapters
+            }
+                .onSuccess { (graph, chapters) ->
+                    _uiState.update {
+                        it.copy(
+                            mode = EditorMode.AI_READONLY,
+                            events = graph.events,
+                            connections = graph.connections,
+                            characters = graph.characters,
+                            manuscriptTitle = graph.title,
+                            manuscriptDescription = graph.description,
+                            chapters = chapters,
+                            openChapterId = null,
+                            isLoading = false,
+                            loadError = null,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { it.copy(isLoading = false, loadError = throwable.message) }
+                }
+        }
+    }
+
+    fun retryLoadGraph(projectId: String) {
+        graphRequested = false
+        loadGraph(projectId)
+    }
 
     fun initTags(defaults: List<EventTag>) {
         _uiState.update { state ->
@@ -49,6 +115,205 @@ class EditorViewModel(
 
     fun selectTab(tab: EditorTab) {
         _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    fun updateManuscriptTitle(value: String) {
+        _uiState.update { it.copy(manuscriptTitle = value) }
+    }
+
+    fun updateManuscriptDescription(value: String) {
+        _uiState.update { it.copy(manuscriptDescription = value) }
+    }
+
+    fun openChapter(
+        projectId: String,
+        id: String?,
+    ) {
+        val previousId = _uiState.value.openChapterId
+        if (previousId != null && previousId != id && previousId in dirtyChapterIds) {
+            commitChapter(projectId, previousId)
+        }
+        _uiState.update { state ->
+            val relocked =
+                if (previousId != null && previousId != id) {
+                    state.chapters.map { if (it.id == previousId && it.serverBacked) it.copy(locked = true) else it }
+                } else {
+                    state.chapters
+                }
+            state.copy(
+                chapters = relocked,
+                openChapterId = id,
+                chapterError = null,
+                chapterSaved = id != null && id in savedChapterIds,
+            )
+        }
+        if (id == null) return
+        val chapter = _uiState.value.chapters.find { it.id == id } ?: return
+        if (chapter.loaded || !chapter.serverBacked) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isChapterLoading = true, chapterError = null) }
+            runCatching { projectRepository.loadChapterText(projectId, id) }
+                .onSuccess { full ->
+                    _uiState.update { state ->
+                        state.copy(
+                            chapters = state.chapters.map { if (it.id == id) full else it },
+                            isChapterLoading = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { it.copy(isChapterLoading = false, chapterError = throwable.message) }
+                }
+        }
+    }
+
+    fun addChapter() {
+        val nextOrder = (_uiState.value.chapters.maxOfOrNull { it.order } ?: 0) + 1
+        val chapter = ManuscriptChapter(order = nextOrder, locked = false, loaded = true)
+        _uiState.update {
+            it.copy(chapters = it.chapters + chapter, openChapterId = chapter.id, chapterSaved = false, chapterError = null)
+        }
+    }
+
+    fun beginEditChapter(id: String) {
+        _uiState.update { state ->
+            state.copy(
+                chapters = state.chapters.map { if (it.id == id) it.copy(locked = false) else it },
+                chapterSaved = false,
+            )
+        }
+    }
+
+    fun saveChapter(
+        projectId: String,
+        id: String,
+    ) {
+        val chapter = _uiState.value.chapters.find { it.id == id } ?: return
+        if (chapter.text.isBlank() || _uiState.value.isChapterSaving || _uiState.value.chapterSaved) return
+        dirtyChapterIds.remove(id)
+        viewModelScope.launch {
+            _uiState.update { it.copy(isChapterSaving = true, chapterError = null) }
+            runCatching { pushChapter(projectId, chapter) }
+                .onSuccess { jobId ->
+                    savedChapterIds.add(id)
+                    _uiState.update {
+                        it.copy(
+                            isChapterSaving = false,
+                            chapterSaved = true,
+                            isGraphUpdating = true,
+                            graphUpdateError = null,
+                        )
+                    }
+                    updateGraphInBackground(projectId, jobId)
+                }
+                .onFailure { throwable ->
+                    dirtyChapterIds.add(id)
+                    _uiState.update { it.copy(isChapterSaving = false, chapterError = throwable.message) }
+                }
+        }
+    }
+
+    private fun commitChapter(
+        projectId: String,
+        id: String,
+    ) {
+        val chapter = _uiState.value.chapters.find { it.id == id } ?: return
+        if (chapter.text.isBlank()) return
+        dirtyChapterIds.remove(id)
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGraphUpdating = true, graphUpdateError = null) }
+            runCatching { pushChapter(projectId, chapter) }
+                .onSuccess { jobId ->
+                    savedChapterIds.add(id)
+                    _uiState.update { it.copy(chapterSaved = it.openChapterId == id) }
+                    updateGraphInBackground(projectId, jobId)
+                }
+                .onFailure { throwable ->
+                    dirtyChapterIds.add(id)
+                    _uiState.update { it.copy(isGraphUpdating = false, graphUpdateError = throwable.message) }
+                }
+        }
+    }
+
+    fun exitEditor(projectId: String) {
+        val openId = _uiState.value.openChapterId
+        if (openId != null && openId in dirtyChapterIds) {
+            val chapter = _uiState.value.chapters.find { it.id == openId }
+            if (chapter != null && chapter.text.isNotBlank()) {
+                dirtyChapterIds.remove(openId)
+                appScope.launch { runCatching { pushChapter(projectId, chapter) } }
+            }
+        }
+        viewModelScope.launch { _exitEvent.emit(Unit) }
+    }
+
+    private suspend fun pushChapter(
+        projectId: String,
+        chapter: ManuscriptChapter,
+    ): String =
+        if (chapter.serverBacked) {
+            projectRepository.updateChapter(projectId, chapter.id, chapter.text, chapter.title)
+        } else {
+            projectRepository.addChapter(projectId, chapter.text, chapter.title)
+        }
+
+    private fun updateGraphInBackground(
+        projectId: String,
+        jobId: String,
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                projectRepository.awaitJobCompletion(jobId)
+                projectRepository.loadGraph(projectId)
+            }
+                .onSuccess { graph ->
+                    _uiState.update {
+                        it.copy(
+                            events = graph.events,
+                            connections = graph.connections,
+                            characters = graph.characters,
+                            manuscriptTitle = graph.title,
+                            manuscriptDescription = graph.description,
+                            isGraphUpdating = false,
+                            graphUpdateError = null,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { it.copy(isGraphUpdating = false, graphUpdateError = throwable.message) }
+                }
+        }
+    }
+
+    fun updateChapterText(
+        id: String,
+        text: String,
+        bold: List<Boolean>,
+        italic: List<Boolean>,
+    ) {
+        val target = _uiState.value.chapters.find { it.id == id } ?: return
+        if (target.locked) return
+        if (text != target.text) dirtyChapterIds.add(id)
+        _uiState.update { state ->
+            state.copy(
+                chapters =
+                    state.chapters.map { chapter ->
+                        if (chapter.id == id) chapter.copy(text = text, bold = bold, italic = italic) else chapter
+                    },
+                chapterSaved = if (text != target.text && state.openChapterId == id) false else state.chapterSaved,
+            )
+        }
+    }
+
+    fun setChapterAlign(
+        id: String,
+        align: ManuscriptAlign,
+    ) {
+        _uiState.update { state ->
+            state.copy(
+                chapters = state.chapters.map { if (it.id == id) it.copy(align = align) else it },
+            )
+        }
     }
 
     fun addEvent(
@@ -123,6 +388,17 @@ class EditorViewModel(
         }
     }
 
+    fun updateConnectionColor(
+        id: String,
+        colorArgb: Long?,
+    ) {
+        _uiState.update { state ->
+            state.copy(
+                connections = state.connections.map { if (it.id == id) it.copy(colorArgb = colorArgb) else it },
+            )
+        }
+    }
+
     fun updateEventPosition(
         id: String,
         dragAmount: Offset,
@@ -141,6 +417,16 @@ class EditorViewModel(
                 events = updatedEvents,
                 selectedEvent = updatedEvents.find { it.id == state.selectedEvent?.id },
             )
+        }
+    }
+
+    fun persistEventPosition(
+        projectId: String,
+        eventId: String,
+    ) {
+        val position = _uiState.value.events.find { it.id == eventId }?.position ?: return
+        viewModelScope.launch {
+            runCatching { projectRepository.saveEventPosition(projectId, eventId, position) }
         }
     }
 
@@ -291,18 +577,27 @@ class EditorViewModel(
 
             val manualEvents = state.events.filter { it.isManuallyPositioned }
             val autoEvents = state.events.filter { !it.isManuallyPositioned }
+            val usesLevel = autoEvents.any { it.level != null }
 
-            val byDate = autoEvents.groupBy { it.eventDate }
-            val sortedDates =
-                byDate.keys.sortedWith(
-                    compareBy { dateKey -> parseEventDate(dateKey) },
-                )
+            val layers: List<List<EditorEvent>> =
+                if (usesLevel) {
+                    autoEvents
+                        .groupBy { it.level ?: Int.MAX_VALUE }
+                        .toSortedMap()
+                        .values
+                        .map { layer -> layer.sortedBy { it.orderInLevel ?: Int.MAX_VALUE } }
+                        .toList()
+                } else {
+                    val byDate = autoEvents.groupBy { it.eventDate }
+                    byDate.keys
+                        .sortedWith(compareBy { dateKey -> parseEventDate(dateKey) })
+                        .map { date -> byDate[date].orEmpty() }
+                }
 
             val laidOut = mutableMapOf<String, EditorEvent>()
             manualEvents.forEach { laidOut[it.id] = it }
 
-            sortedDates.forEachIndexed { layerIndex, date ->
-                val layer = byDate[date] ?: return@forEachIndexed
+            layers.forEachIndexed { layerIndex, layer ->
                 layer.forEachIndexed { colIndex, event ->
                     laidOut[event.id] =
                         event.copy(

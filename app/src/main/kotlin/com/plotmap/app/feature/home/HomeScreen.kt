@@ -1,4 +1,5 @@
 package com.plotmap.app.feature.home
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,15 +14,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.plotmap.app.R
-import com.plotmap.app.core.designsystem.DarkBrownInk
-import com.plotmap.app.core.designsystem.LatteCreamText
-import com.plotmap.app.core.designsystem.LightOrange
-import com.plotmap.app.core.designsystem.LocalIsDarkTheme
+import com.plotmap.app.core.designsystem.BorderCardViolet
+import com.plotmap.app.core.designsystem.Gold
+import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.Lavender
+import com.plotmap.app.core.designsystem.LogoTextStyle
+import com.plotmap.app.core.designsystem.OnGold
+import com.plotmap.app.core.designsystem.Surface
+import com.plotmap.app.core.designsystem.TextMuted
+import com.plotmap.app.core.designsystem.WineText
+import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 
 data class HomeProjectItem(
     val id: String,
@@ -62,72 +70,99 @@ fun HomeScreen(
             }
         }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { HomeTopLogo() },
-                actions = {
-                    IconButton(onClick = onNavigateToProfile) {
-                        Icon(
-                            Icons.Filled.AccountCircle,
-                            contentDescription = stringResource(R.string.profile),
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            SmallFloatingActionButton(onClick = onNavigateToCreate) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_project))
-            }
-        },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-        ) {
-            LazyColumn(
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) {
-                item {
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(stringResource(R.string.search_projects)) },
-                        leadingIcon = { Icon(Icons.Filled.Search, null) },
-                        shape = RoundedCornerShape(18.dp),
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    TabRow(selectedTabIndex = selectedTabIndex) {
-                        tabTitles.forEachIndexed { index, title ->
-                            Tab(
-                                selected = selectedTabIndex == index,
-                                onClick = { selectedTabIndex = index },
-                                text = { Text(title) },
+    ManuscriptBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { HomeTopLogo() },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = GoldBright,
+                            actionIconContentColor = GoldBright,
+                        ),
+                    actions = {
+                        IconButton(onClick = onNavigateToProfile) {
+                            Icon(
+                                Icons.Filled.AccountCircle,
+                                contentDescription = stringResource(R.string.profile),
+                                modifier = Modifier.size(32.dp),
                             )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    },
+                )
+            },
+            floatingActionButton = {
+                SmallFloatingActionButton(
+                    onClick = onNavigateToCreate,
+                    containerColor = Gold,
+                    contentColor = OnGold,
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_project))
                 }
+            },
+        ) { padding ->
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+            ) {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                ) {
+                    item {
+                        OutlinedTextField(
+                            value = "",
+                            onValueChange = {},
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(stringResource(R.string.search_projects), color = TextMuted) },
+                            leadingIcon = { Icon(Icons.Filled.Search, null, tint = GoldBright) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Surface,
+                                    unfocusedContainerColor = Surface,
+                                    focusedBorderColor = GoldBright,
+                                    unfocusedBorderColor = BorderCardViolet,
+                                    cursorColor = GoldBright,
+                                ),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        TabRow(
+                            selectedTabIndex = selectedTabIndex,
+                            containerColor = Color.Transparent,
+                            contentColor = GoldBright,
+                        ) {
+                            tabTitles.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedTabIndex == index,
+                                    onClick = { selectedTabIndex = index },
+                                    selectedContentColor = GoldBright,
+                                    unselectedContentColor = Lavender,
+                                    text = { Text(title) },
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
 
-                items(items = filteredProjects, key = { it.id }) { project ->
-                    ProjectCardItem(
-                        title = project.title,
-                        description = project.description,
-                        listHeightStr = listHeightStr,
-                        onClick = { onNavigateToEditor(project.id) },
-                        onEditClick = {
-                            renameProject = project
-                            editedTitle = project.title
-                        },
-                        onDeleteClick = { deleteProject = project },
-                    )
+                    items(items = filteredProjects, key = { it.id }) { project ->
+                        ProjectCardItem(
+                            title = project.title,
+                            description = project.description,
+                            listHeightStr = listHeightStr,
+                            onClick = { onNavigateToEditor(project.id) },
+                            onEditClick = {
+                                renameProject = project
+                                editedTitle = project.title
+                            },
+                            onDeleteClick = { deleteProject = project },
+                        )
+                    }
                 }
             }
         }
@@ -194,8 +229,8 @@ fun HomeScreen(
 private fun HomeTopLogo() {
     Text(
         text = stringResource(R.string.app_name),
-        fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
+        style = LogoTextStyle.copy(fontSize = 28.sp),
+        color = GoldBright,
     )
 }
 
@@ -209,9 +244,6 @@ fun ProjectCardItem(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    val isDarkTheme = LocalIsDarkTheme.current
-    val cardColor = if (isDarkTheme) LatteCreamText else LightOrange
-
     val heightDp =
         when (listHeightStr) {
             "small" -> 100.dp
@@ -221,25 +253,29 @@ fun ProjectCardItem(
 
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(heightDp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(heightDp)
+                .border(1.dp, BorderCardViolet, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
+        colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp, pressedElevation = 12.dp),
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
             Column(modifier = Modifier.align(Alignment.TopStart)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = DarkBrownInk,
+                    color = GoldBright,
                 )
                 if (description.isNotBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = DarkBrownInk.copy(alpha = 0.58f),
+                        color = TextMuted,
                         maxLines = 2,
                     )
                 }
@@ -249,14 +285,14 @@ fun ProjectCardItem(
                     Icon(
                         imageVector = Icons.Filled.Create,
                         contentDescription = stringResource(R.string.edit),
-                        tint = DarkBrownInk,
+                        tint = GoldBright,
                     )
                 }
                 IconButton(onClick = onDeleteClick) {
                     Icon(
                         imageVector = Icons.Filled.Delete,
                         contentDescription = stringResource(R.string.delete),
-                        tint = DarkBrownInk,
+                        tint = WineText,
                     )
                 }
             }

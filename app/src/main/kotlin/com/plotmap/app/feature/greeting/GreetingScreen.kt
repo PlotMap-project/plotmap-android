@@ -3,6 +3,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,7 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.plotmap.app.R
+import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 
 @Composable
 fun GreetingScreen(
@@ -35,14 +40,18 @@ fun GreetingScreen(
         } else {
             stringResource(R.string.welcome_name, normalizedUserName)
         }
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.graphicsLayer(alpha = alpha.value),
-        )
+    ManuscriptBackground {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = greeting,
+                style = MaterialTheme.typography.headlineMedium,
+                color = GoldBright,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.graphicsLayer(alpha = alpha.value),
+            )
+        }
     }
 }

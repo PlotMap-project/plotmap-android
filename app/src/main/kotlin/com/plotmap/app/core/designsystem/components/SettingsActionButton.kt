@@ -1,11 +1,8 @@
 package com.plotmap.app.core.designsystem.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.plotmap.app.core.designsystem.DarkBrownInk
-import com.plotmap.app.core.designsystem.LocalIsDarkTheme
-import com.plotmap.app.core.designsystem.MilkChocolateCard
-import com.plotmap.app.core.designsystem.PaperBeige
 
 @Composable
 fun SettingsActionButton(
@@ -14,13 +11,10 @@ fun SettingsActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val isDarkTheme = LocalIsDarkTheme.current
-    ActionButton(
+    PlotMapSecondaryButton(
         text = text,
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         enabled = enabled,
-        containerColor = if (isDarkTheme) MilkChocolateCard else DarkBrownInk,
-        contentColor = PaperBeige,
     )
 }

@@ -1,6 +1,5 @@
 package com.plotmap.app.feature.settings
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +38,8 @@ import androidx.core.os.LocaleListCompat
 import com.plotmap.app.R
 import com.plotmap.app.core.data.PreferencesManager
 import com.plotmap.app.core.data.TokenManager
+import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 import com.plotmap.app.core.designsystem.components.PlotMapBackButton
 import org.koin.java.KoinJavaComponent.inject
 
@@ -60,213 +61,186 @@ fun SettingsScreen(
     var listHeight by remember { mutableStateOf(preferencesManager.getListHeight()) }
     var sortBy by remember { mutableStateOf(preferencesManager.getSortBy()) }
     var autoBackup by remember { mutableStateOf(preferencesManager.isAutoBackupEnabled()) }
-    var themeDialogExpanded by remember { mutableStateOf(false) }
-    var tempTheme by remember { mutableStateOf(if (isDarkTheme) "dark" else "light") }
     var languageDialogExpanded by remember { mutableStateOf(false) }
     var fontSizeDialogExpanded by remember { mutableStateOf(false) }
     var listHeightDialogExpanded by remember { mutableStateOf(false) }
     var sortByDialogExpanded by remember { mutableStateOf(false) }
     val primaryTextColor = MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(24.dp),
-    ) {
+    ManuscriptBackground {
         Column(
             modifier =
                 Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxSize()
+                    .padding(24.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PlotMapBackButton(onClick = onBack, contentDescription = stringResource(R.string.btn_back))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.settings),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = primaryTextColor,
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            SettingClickableItem(
-                label = stringResource(R.string.theme),
-                value = if (isDarkTheme) stringResource(R.string.theme_dark) else stringResource(R.string.theme_light),
-                textColor = primaryTextColor,
-                onClick = {
-                    tempTheme = if (isDarkTheme) "dark" else "light"
-                    themeDialogExpanded = true
-                },
-            )
-            if (themeDialogExpanded) {
-                SelectionDialog(
-                    title = stringResource(R.string.theme),
-                    options =
-                        listOf(
-                            "light" to stringResource(R.string.theme_light),
-                            "dark" to stringResource(R.string.theme_dark),
-                        ),
-                    selectedOption = tempTheme,
-                    onOptionSelect = { tempTheme = it },
-                    onConfirm = {
-                        onThemeChange(tempTheme == "dark")
-                        themeDialogExpanded = false
-                    },
-                    onDismiss = { themeDialogExpanded = false },
-                )
-            }
-            SettingClickableItem(
-                label = stringResource(R.string.language),
-                value = if (language == "ru") stringResource(R.string.lang_ru) else "English",
-                textColor = primaryTextColor,
-                onClick = { languageDialogExpanded = true },
-            )
-            if (languageDialogExpanded) {
-                SelectionDialog(
-                    title = stringResource(R.string.language),
-                    options = listOf("ru" to stringResource(R.string.lang_ru), "en" to "English"),
-                    selectedOption = language,
-                    onOptionSelect = { language = it },
-                    onConfirm = {
-                        preferencesManager.setLanguage(language)
-                        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language))
-                        languageDialogExpanded = false
-                    },
-                    onDismiss = { languageDialogExpanded = false },
-                )
-            }
-            SettingClickableItem(
-                label = stringResource(R.string.font_size),
-                value =
-                    when (fontSize) {
-                        "small" -> stringResource(R.string.font_small)
-                        "large" -> stringResource(R.string.font_large)
-                        else -> stringResource(R.string.font_medium)
-                    },
-                textColor = primaryTextColor,
-                onClick = { fontSizeDialogExpanded = true },
-            )
-            if (fontSizeDialogExpanded) {
-                SelectionDialog(
-                    title = stringResource(R.string.font_size),
-                    options =
-                        listOf(
-                            "small" to stringResource(R.string.font_small),
-                            "medium" to stringResource(R.string.font_medium),
-                            "large" to stringResource(R.string.font_large),
-                        ),
-                    selectedOption = fontSize,
-                    onOptionSelect = { fontSize = it },
-                    onConfirm = {
-                        preferencesManager.setFontSize(fontSize)
-                        onFontSizeChange(fontSize)
-                        fontSizeDialogExpanded = false
-                    },
-                    onDismiss = { fontSizeDialogExpanded = false },
-                )
-            }
-            SettingClickableItem(
-                label = stringResource(R.string.list_height),
-                value =
-                    when (listHeight) {
-                        "small" -> stringResource(R.string.lh_small)
-                        "large" -> stringResource(R.string.lh_large)
-                        else -> stringResource(R.string.lh_medium)
-                    },
-                textColor = primaryTextColor,
-                onClick = { listHeightDialogExpanded = true },
-            )
-            if (listHeightDialogExpanded) {
-                SelectionDialog(
-                    title = stringResource(R.string.list_height_short),
-                    options =
-                        listOf(
-                            "small" to stringResource(R.string.lh_small),
-                            "medium" to stringResource(R.string.lh_medium),
-                            "large" to stringResource(R.string.lh_large),
-                        ),
-                    selectedOption = listHeight,
-                    onOptionSelect = { listHeight = it },
-                    onConfirm = {
-                        preferencesManager.setListHeight(listHeight)
-                        onListHeightChange(listHeight)
-                        listHeightDialogExpanded = false
-                    },
-                    onDismiss = { listHeightDialogExpanded = false },
-                )
-            }
-            SettingClickableItem(
-                label = stringResource(R.string.sort_projects),
-                value =
-                    when (sortBy) {
-                        "date_created" -> stringResource(R.string.sort_date_created)
-                        "name" -> stringResource(R.string.sort_name)
-                        else -> stringResource(R.string.sort_date_modified)
-                    },
-                textColor = primaryTextColor,
-                onClick = { sortByDialogExpanded = true },
-            )
-            if (sortByDialogExpanded) {
-                SelectionDialog(
-                    title = stringResource(R.string.sort),
-                    options =
-                        listOf(
-                            "date_modified" to stringResource(R.string.sort_date_modified),
-                            "date_created" to stringResource(R.string.sort_date_created),
-                            "name" to stringResource(R.string.sort_name),
-                        ),
-                    selectedOption = sortBy,
-                    onOptionSelect = { sortBy = it },
-                    onConfirm = {
-                        preferencesManager.setSortBy(sortBy)
-                        onSortByChange(sortBy)
-                        sortByDialogExpanded = false
-                    },
-                    onDismiss = { sortByDialogExpanded = false },
-                )
-            }
-            SettingItem(label = stringResource(R.string.autosave), textColor = primaryTextColor) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = autoBackup,
-                        onCheckedChange = {
-                            autoBackup = it
-                            preferencesManager.setAutoBackup(it)
-                        },
-                    )
+                    PlotMapBackButton(onClick = onBack, contentDescription = stringResource(R.string.btn_back))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (autoBackup) stringResource(R.string.on) else stringResource(R.string.off),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = primaryTextColor,
+                        text = stringResource(R.string.settings),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = GoldBright,
                     )
                 }
+                Spacer(modifier = Modifier.height(24.dp))
+                SettingClickableItem(
+                    label = stringResource(R.string.language),
+                    value = if (language == "ru") stringResource(R.string.lang_ru) else "English",
+                    textColor = primaryTextColor,
+                    onClick = { languageDialogExpanded = true },
+                )
+                if (languageDialogExpanded) {
+                    SelectionDialog(
+                        title = stringResource(R.string.language),
+                        options = listOf("ru" to stringResource(R.string.lang_ru), "en" to "English"),
+                        selectedOption = language,
+                        onOptionSelect = { language = it },
+                        onConfirm = {
+                            preferencesManager.setLanguage(language)
+                            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language))
+                            languageDialogExpanded = false
+                        },
+                        onDismiss = { languageDialogExpanded = false },
+                    )
+                }
+                SettingClickableItem(
+                    label = stringResource(R.string.font_size),
+                    value =
+                        when (fontSize) {
+                            "small" -> stringResource(R.string.font_small)
+                            "large" -> stringResource(R.string.font_large)
+                            else -> stringResource(R.string.font_medium)
+                        },
+                    textColor = primaryTextColor,
+                    onClick = { fontSizeDialogExpanded = true },
+                )
+                if (fontSizeDialogExpanded) {
+                    SelectionDialog(
+                        title = stringResource(R.string.font_size),
+                        options =
+                            listOf(
+                                "small" to stringResource(R.string.font_small),
+                                "medium" to stringResource(R.string.font_medium),
+                                "large" to stringResource(R.string.font_large),
+                            ),
+                        selectedOption = fontSize,
+                        onOptionSelect = { fontSize = it },
+                        onConfirm = {
+                            preferencesManager.setFontSize(fontSize)
+                            onFontSizeChange(fontSize)
+                            fontSizeDialogExpanded = false
+                        },
+                        onDismiss = { fontSizeDialogExpanded = false },
+                    )
+                }
+                SettingClickableItem(
+                    label = stringResource(R.string.list_height),
+                    value =
+                        when (listHeight) {
+                            "small" -> stringResource(R.string.lh_small)
+                            "large" -> stringResource(R.string.lh_large)
+                            else -> stringResource(R.string.lh_medium)
+                        },
+                    textColor = primaryTextColor,
+                    onClick = { listHeightDialogExpanded = true },
+                )
+                if (listHeightDialogExpanded) {
+                    SelectionDialog(
+                        title = stringResource(R.string.list_height_short),
+                        options =
+                            listOf(
+                                "small" to stringResource(R.string.lh_small),
+                                "medium" to stringResource(R.string.lh_medium),
+                                "large" to stringResource(R.string.lh_large),
+                            ),
+                        selectedOption = listHeight,
+                        onOptionSelect = { listHeight = it },
+                        onConfirm = {
+                            preferencesManager.setListHeight(listHeight)
+                            onListHeightChange(listHeight)
+                            listHeightDialogExpanded = false
+                        },
+                        onDismiss = { listHeightDialogExpanded = false },
+                    )
+                }
+                SettingClickableItem(
+                    label = stringResource(R.string.sort_projects),
+                    value =
+                        when (sortBy) {
+                            "date_created" -> stringResource(R.string.sort_date_created)
+                            "name" -> stringResource(R.string.sort_name)
+                            else -> stringResource(R.string.sort_date_modified)
+                        },
+                    textColor = primaryTextColor,
+                    onClick = { sortByDialogExpanded = true },
+                )
+                if (sortByDialogExpanded) {
+                    SelectionDialog(
+                        title = stringResource(R.string.sort),
+                        options =
+                            listOf(
+                                "date_modified" to stringResource(R.string.sort_date_modified),
+                                "date_created" to stringResource(R.string.sort_date_created),
+                                "name" to stringResource(R.string.sort_name),
+                            ),
+                        selectedOption = sortBy,
+                        onOptionSelect = { sortBy = it },
+                        onConfirm = {
+                            preferencesManager.setSortBy(sortBy)
+                            onSortByChange(sortBy)
+                            sortByDialogExpanded = false
+                        },
+                        onDismiss = { sortByDialogExpanded = false },
+                    )
+                }
+                SettingItem(label = stringResource(R.string.autosave), textColor = primaryTextColor) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = autoBackup,
+                            onCheckedChange = {
+                                autoBackup = it
+                                preferencesManager.setAutoBackup(it)
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (autoBackup) stringResource(R.string.on) else stringResource(R.string.off),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = primaryTextColor,
+                        )
+                    }
+                }
             }
-        }
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToAbout() }
-                    .padding(16.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(R.string.about_app),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = primaryTextColor,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.app_version),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondaryTextColor,
-                )
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToAbout() }
+                        .padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.about_app),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = primaryTextColor,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.app_version),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = secondaryTextColor,
+                    )
+                }
             }
         }
     }
@@ -319,7 +293,7 @@ private fun SettingClickableItem(
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = GoldBright,
         )
     }
 }

@@ -6,24 +6,36 @@ import com.plotmap.app.core.network.PlotMapApi
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.dsl.module
 import retrofit2.Retrofit
+import java.util.concurrent.TimeUnit
 
 val networkModule =
     module {
         single {
             val json = Json { ignoreUnknownKeys = true }
             Retrofit.Builder()
-                .baseUrl("https://thirty-mirrors-crash.loca.lt/api/v1/")
+                .baseUrl("https://month-supreme-receives-port.trycloudflare.com/api/v1/")
                 .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .client(
+
                     OkHttpClient.Builder()
+                        .callTimeout(300, TimeUnit.SECONDS)
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(240, TimeUnit.SECONDS)
+                        .writeTimeout(60, TimeUnit.SECONDS)
                         .addInterceptor(
                             AuthInterceptor(
                                 tokenProvider = { get<TokenManager>().getToken() },
-                            ),
+                            )
                         )
-                        .build(),
+                        .addInterceptor(
+                            HttpLoggingInterceptor().apply {
+                                level = HttpLoggingInterceptor.Level.BODY
+                            }
+                        )
+                        .build()
                 )
                 .build()
                 .create(PlotMapApi::class.java)

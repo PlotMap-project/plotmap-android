@@ -1,7 +1,6 @@
 package com.plotmap.app
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -14,14 +13,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.core.os.LocaleListCompat
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.plotmap.app.core.data.PreferencesManager
 import com.plotmap.app.core.data.ProjectRepository
 import com.plotmap.app.core.data.TokenManager
 import com.plotmap.app.core.designsystem.PlotMapTheme
+import com.plotmap.app.core.models.EditorMode
 import com.plotmap.app.core.navigation.Screen
 import com.plotmap.app.feature.auth.AuthScreen
 import com.plotmap.app.feature.editor.creation.CreationChoiceScreen
@@ -99,6 +101,7 @@ fun PlotMapApp(
     val currentRoute = backStackEntry?.destination?.route
     var sortBy by remember { mutableStateOf(preferencesManager.getSortBy()) }
     val projects = remember { mutableStateListOf<HomeProjectItem>() }
+    var pendingGeneration by remember { mutableStateOf<GenerationInput?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     fun refreshProjects() {
@@ -166,7 +169,11 @@ fun PlotMapApp(
                 listHeightStr = listHeightStr,
                 projects = sortedProjects,
                 onNavigateToCreate = { navController.navigate(Screen.ProjectCreation.route) },
-                onNavigateToEditor = { projectId -> navController.navigate(Screen.Editor.createRoute(projectId)) },
+                onNavigateToEditor = { projectId ->
+                    val isAi = projects.find { it.id == projectId }?.isAiGenerated == true
+                    val mode = if (isAi) EditorMode.AI_READONLY else EditorMode.MANUAL
+                    navController.navigate(Screen.Editor.createRoute(projectId, mode))
+                },
                 onRenameProject = { projectId, newTitle ->
                     if (newTitle.any { it.isLetter() }) {
                         coroutineScope.launch {
@@ -234,25 +241,18 @@ fun PlotMapApp(
         composable(Screen.ProjectCreation.route) {
             CreationChoiceScreen(
                 onCreateProject = { name, description, sourceText, isAiGenerated ->
-                    coroutineScope.launch {
-                        kotlinx.coroutines.delay(100)
-                        val fakeId = java.util.UUID.randomUUID().toString()
-
-                        val createdProject =
-                            HomeProjectItem(
-                                id = fakeId,
-                                title = name,
-                                description = description,
-                                isAiGenerated = false,
-                                createdAt = System.currentTimeMillis(),
-                                modifiedAt = System.currentTimeMillis(),
-                            )
-
-                        Log.d("PlotMapNav", "Заглушка: Создан локальный проект с ID: $fakeId")
-
-                        projects.add(0, createdProject)
-                        navController.navigate(Screen.Editor.createRoute(createdProject.id)) {
-                            popUpTo(Screen.ProjectCreation.route) { inclusive = true }
+                    if (isAiGenerated) {
+                        pendingGeneration = GenerationInput(name, description, sourceText)
+                        navController.navigate(Screen.ProjectGeneration.route)
+                    } else {
+                        coroutineScope.launch {
+                            runCatching { projectRepository.createProject(name, description) }
+                                .onSuccess { createdProject ->
+                                    projects.add(0, createdProject)
+                                    navController.navigate(Screen.Editor.createRoute(createdProject.id, EditorMode.MANUAL)) {
+                                        popUpTo(Screen.ProjectCreation.route) { inclusive = true }
+                                    }
+                                }
                         }
                     }
                 },
@@ -260,20 +260,47 @@ fun PlotMapApp(
             )
         }
         composable(Screen.ProjectGeneration.route) {
-            GenerationScreen(
-                onGenerationComplete = { newProjectId ->
-                    navController.navigate(Screen.Editor.createRoute(newProjectId)) {
-                        popUpTo(Screen.Home.route)
-                    }
-                },
-            )
+            val input = remember { pendingGeneration }
+            if (input == null) {
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+            } else {
+                GenerationScreen(
+                    name = input.name,
+                    description = input.description,
+                    text = input.text,
+                    onGenerationComplete = { newProjectId ->
+                        pendingGeneration = null
+                        refreshProjects()
+                        navController.navigate(Screen.Editor.createRoute(newProjectId, EditorMode.AI_READONLY)) {
+                            popUpTo(Screen.Home.route)
+                        }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
-        composable(Screen.Editor.route) { backStackEntry ->
+        composable(
+            route = Screen.Editor.route,
+            arguments =
+                listOf(
+                    navArgument("mode") {
+                        type = NavType.StringType
+                        defaultValue = EditorMode.MANUAL.name
+                    },
+                ),
+        ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
+            val mode =
+                backStackEntry.arguments?.getString("mode")
+                    ?.let { runCatching { EditorMode.valueOf(it) }.getOrNull() }
+                    ?: EditorMode.MANUAL
             val viewModel: EditorViewModel = koinViewModel()
 
             EditorScreen(
                 projectId = projectId,
+                mode = mode,
                 viewModel = viewModel,
                 onBackToHome = {
                     navController.navigate(Screen.Home.route) {
@@ -285,6 +312,12 @@ fun PlotMapApp(
         }
     }
 }
+
+private data class GenerationInput(
+    val name: String,
+    val description: String,
+    val text: String,
+)
 
 private fun sortProjects(
     projects: List<HomeProjectItem>,

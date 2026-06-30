@@ -1,5 +1,6 @@
 package com.plotmap.app.core.navigation
 import android.net.Uri
+import com.plotmap.app.core.models.EditorMode
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -23,8 +24,11 @@ sealed class Screen(val route: String) {
 
     object ProjectGeneration : Screen("project_generation")
 
-    object Editor : Screen("editor/{projectId}") {
-        fun createRoute(projectId: String) = "editor/$projectId"
+    object Editor : Screen("editor/{projectId}?mode={mode}") {
+        fun createRoute(
+            projectId: String,
+            mode: EditorMode = EditorMode.MANUAL,
+        ) = "editor/$projectId?mode=${mode.name}"
     }
 
     object About : Screen("about")

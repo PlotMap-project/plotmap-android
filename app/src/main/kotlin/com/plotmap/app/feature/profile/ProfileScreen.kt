@@ -1,6 +1,5 @@
 package com.plotmap.app.feature.profile
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,8 +14,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.plotmap.app.core.data.TokenManager
+import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.OnBackground
+import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 import com.plotmap.app.core.designsystem.components.NextButton
 import com.plotmap.app.core.designsystem.components.PlotMapBackButton
+import com.plotmap.app.core.designsystem.components.PlotMapDestructiveButton
 import com.plotmap.app.core.designsystem.components.SettingsActionButton
 import com.plotmap.app.core.designsystem.components.UnifiedActionButton
 import org.koin.java.KoinJavaComponent.inject
@@ -38,91 +41,93 @@ fun ProfileScreen(
     var showDeleteStep3Dialog by remember { mutableStateOf(false) }
     var password by remember { mutableStateOf("") }
 
-    val primaryTextColor = MaterialTheme.colorScheme.onBackground
+    val primaryTextColor = OnBackground
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PlotMapBackButton(onClick = onBack, contentDescription = "Назад")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Профиль",
-                style = MaterialTheme.typography.headlineMedium,
-                color = primaryTextColor,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Filled.AccountCircle,
-                    contentDescription = "Аватар",
-                    modifier = Modifier.size(100.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = userName,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = primaryTextColor,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
+    ManuscriptBackground {
         Column(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = "Синхронизация с Google",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = primaryTextColor,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PlotMapBackButton(onClick = onBack, contentDescription = "Назад")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Профиль",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = GoldBright,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Filled.AccountCircle,
+                        contentDescription = "Аватар",
+                        modifier = Modifier.size(100.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = userName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = primaryTextColor,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+            ) {
+                Text(
+                    text = "Синхронизация с Google",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryTextColor,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "отключена",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            SettingsActionButton(
+                text = "Настройки",
+                onClick = onNavigateToSettings,
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "отключена",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            UnifiedActionButton(
+                text = "Выйти из аккаунта",
+                onClick = { showLogoutDialog = true },
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PlotMapDestructiveButton(
+                text = "Удалить аккаунт",
+                onClick = { showDeleteStep1Dialog = true },
+                modifier = Modifier.fillMaxWidth(),
             )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        SettingsActionButton(
-            text = "Настройки",
-            onClick = onNavigateToSettings,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        UnifiedActionButton(
-            text = "Выйти из аккаунта",
-            onClick = { showLogoutDialog = true },
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        UnifiedActionButton(
-            text = "Удалить аккаунт",
-            onClick = { showDeleteStep1Dialog = true },
-        )
     }
 
     if (showLogoutDialog) {

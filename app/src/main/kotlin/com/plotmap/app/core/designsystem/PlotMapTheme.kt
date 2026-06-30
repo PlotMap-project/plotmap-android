@@ -1,71 +1,57 @@
 package com.plotmap.app.core.designsystem
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import com.plotmap.app.R
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 
-val LocalIsDarkTheme = staticCompositionLocalOf { false }
+val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
-val PaperBeige = Color(0xFFFCF5EB)
-val DarkBrownInk = Color(0xFF3D2917)
-val LightOrange = Color(0xFFE9D7CB)
-val SealingWaxRed = Color(0xFFA83F39)
-val DarkCappuccinoColor = Color(0xFF947158)
-val LightCappuccinoColor = Color(0xFFC4A289)
-val TotalWhite = Color(0xFFFFFFFF)
-val DarkCoffeeBackground = Color(0xFF1E140F)
-val MilkChocolateCard = Color(0xFF38261D)
-val LatteCreamText = Color(0xFFE6D6C6)
-val DarkSealingWaxRed = Color(0xFFC0554E)
-private val PlotMapFontFamily = FontFamily(Font(R.font.somic_sans_ms))
-
-private val LightColors =
-    lightColorScheme(
-        primary = DarkBrownInk,
-        onPrimary = PaperBeige,
-        primaryContainer = DarkBrownInk,
-        onPrimaryContainer = DarkBrownInk,
-        secondary = DarkBrownInk,
-        onSecondary = DarkBrownInk,
-        secondaryContainer = PaperBeige,
-        onSecondaryContainer = DarkBrownInk,
-        tertiary = SealingWaxRed,
-        onTertiary = Color.White,
-        background = PaperBeige,
-        onBackground = DarkBrownInk,
-        surface = PaperBeige,
-        onSurface = DarkBrownInk,
-        surfaceVariant = LightOrange,
-        onSurfaceVariant = DarkBrownInk,
+private val ManuscriptColorScheme =
+    darkColorScheme(
+        primary = Gold,
+        onPrimary = OnGold,
+        primaryContainer = SurfaceVariant,
+        onPrimaryContainer = GoldBright,
+        secondary = Lavender,
+        onSecondary = OnGold,
+        secondaryContainer = Surface,
+        onSecondaryContainer = LavenderLight,
+        tertiary = LavenderLight,
+        onTertiary = OnGold,
+        background = BackgroundSolid,
+        onBackground = OnBackground,
+        surface = Surface,
+        onSurface = OnBackground,
+        surfaceVariant = SurfaceVariant,
+        onSurfaceVariant = TextBody,
+        error = WineRed,
+        onError = OnGold,
+        errorContainer = WineSurface,
+        onErrorContainer = WineText,
+        outline = BorderCard,
+        outlineVariant = BorderThin,
     )
 
-private val DarkColors =
-    darkColorScheme(
-        primary = LatteCreamText,
-        onPrimary = DarkCoffeeBackground,
-        primaryContainer = MilkChocolateCard,
-        onPrimaryContainer = LatteCreamText,
-        secondary = MilkChocolateCard,
-        onSecondary = LatteCreamText,
-        secondaryContainer = DarkCoffeeBackground,
-        onSecondaryContainer = LatteCreamText,
-        tertiary = DarkSealingWaxRed,
-        onTertiary = DarkCoffeeBackground,
-        background = DarkCoffeeBackground,
-        onBackground = LatteCreamText,
-        surface = DarkCoffeeBackground,
-        onSurface = LatteCreamText,
-        surfaceVariant = MilkChocolateCard,
-        onSurfaceVariant = LatteCreamText,
+private fun TextStyle.with(
+    family: FontFamily,
+    weight: FontWeight,
+    scale: Float,
+    letterSpacingEm: Float = Float.NaN,
+): TextStyle =
+    copy(
+        fontFamily = family,
+        fontWeight = weight,
+        fontSize = fontSize * scale,
+        lineHeight = if (lineHeight.isSp) lineHeight * scale else lineHeight,
+        letterSpacing = if (letterSpacingEm.isNaN()) letterSpacing else letterSpacingEm.em,
     )
 
 fun getTypography(fontSizeStr: String): Typography {
@@ -75,95 +61,43 @@ fun getTypography(fontSizeStr: String): Typography {
             "large" -> 1.2f
             else -> 1.05f
         }
-    val defaultTypography = Typography()
+    val d = Typography()
     return Typography(
-        displayLarge =
-            defaultTypography.displayLarge.copy(
-                fontSize = defaultTypography.displayLarge.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        displayMedium =
-            defaultTypography.displayMedium.copy(
-                fontSize = defaultTypography.displayMedium.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        displaySmall =
-            defaultTypography.displaySmall.copy(
-                fontSize = defaultTypography.displaySmall.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        headlineLarge =
-            defaultTypography.headlineLarge.copy(
-                fontSize = defaultTypography.headlineLarge.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        headlineMedium =
-            defaultTypography.headlineMedium.copy(
-                fontSize = defaultTypography.headlineMedium.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        headlineSmall =
-            defaultTypography.headlineSmall.copy(
-                fontSize = defaultTypography.headlineSmall.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        titleLarge =
-            defaultTypography.titleLarge.copy(
-                fontSize = defaultTypography.titleLarge.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        titleMedium =
-            defaultTypography.titleMedium.copy(
-                fontSize = defaultTypography.titleMedium.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        titleSmall =
-            defaultTypography.titleSmall.copy(
-                fontSize = defaultTypography.titleSmall.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        bodyLarge =
-            defaultTypography.bodyLarge.copy(
-                fontSize = defaultTypography.bodyLarge.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        bodyMedium =
-            defaultTypography.bodyMedium.copy(
-                fontSize = defaultTypography.bodyMedium.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        bodySmall =
-            defaultTypography.bodySmall.copy(
-                fontSize = defaultTypography.bodySmall.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        labelLarge =
-            defaultTypography.labelLarge.copy(
-                fontSize = defaultTypography.labelLarge.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        labelMedium =
-            defaultTypography.labelMedium.copy(
-                fontSize = defaultTypography.labelMedium.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
-        labelSmall =
-            defaultTypography.labelSmall.copy(
-                fontSize = defaultTypography.labelSmall.fontSize * scale,
-                fontFamily = PlotMapFontFamily,
-            ),
+        displayLarge = d.displayLarge.with(PlayfairDisplayFamily, FontWeight.ExtraBold, scale),
+        displayMedium = d.displayMedium.with(PlayfairDisplayFamily, FontWeight.ExtraBold, scale),
+        displaySmall = d.displaySmall.with(PlayfairDisplayFamily, FontWeight.ExtraBold, scale),
+        headlineLarge = d.headlineLarge.with(PlayfairDisplayFamily, FontWeight.Bold, scale),
+        headlineMedium = d.headlineMedium.with(PlayfairDisplayFamily, FontWeight.Bold, scale),
+        headlineSmall = d.headlineSmall.with(PlayfairDisplayFamily, FontWeight.Bold, scale),
+        titleLarge = d.titleLarge.with(PlayfairDisplayFamily, FontWeight.Bold, scale),
+        titleMedium = d.titleMedium.with(PlayfairDisplayFamily, FontWeight.SemiBold, scale),
+        titleSmall = d.titleSmall.with(PlayfairDisplayFamily, FontWeight.SemiBold, scale),
+        bodyLarge = d.bodyLarge.with(PtSerifFamily, FontWeight.Normal, scale).copy(lineHeight = d.bodyLarge.fontSize * scale * 1.5f),
+        bodyMedium = d.bodyMedium.with(PtSerifFamily, FontWeight.Normal, scale).copy(lineHeight = d.bodyMedium.fontSize * scale * 1.5f),
+        bodySmall = d.bodySmall.with(PtSerifFamily, FontWeight.Normal, scale).copy(lineHeight = d.bodySmall.fontSize * scale * 1.45f),
+        labelLarge = d.labelLarge.with(ForumFamily, FontWeight.Normal, scale, letterSpacingEm = 0.06f),
+        labelMedium = d.labelMedium.with(ForumFamily, FontWeight.Normal, scale, letterSpacingEm = 0.08f),
+        labelSmall = d.labelSmall.with(ForumFamily, FontWeight.Normal, scale, letterSpacingEm = 0.1f),
     )
 }
 
+val LogoTextStyle =
+    TextStyle(
+        fontFamily = CinzelDecorativeFamily,
+        fontWeight = FontWeight.Black,
+        fontSize = 40.sp,
+        letterSpacing = 0.05.em,
+    )
+
 @Composable
 fun PlotMapTheme(
-    isDarkTheme: Boolean = isSystemInDarkTheme(),
+    isDarkTheme: Boolean = true,
     fontSizeStr: String = "medium",
     content: @Composable () -> Unit,
 ) {
-    CompositionLocalProvider(LocalIsDarkTheme provides isDarkTheme) {
+    CompositionLocalProvider(LocalIsDarkTheme provides true) {
         MaterialTheme(
-            colorScheme = if (isDarkTheme) DarkColors else LightColors,
+            colorScheme = ManuscriptColorScheme,
             typography = getTypography(fontSizeStr),
             content = content,
         )

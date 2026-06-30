@@ -1,6 +1,5 @@
 package com.plotmap.app.feature.auth
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,8 +19,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.LavenderLight
+import com.plotmap.app.core.designsystem.TextMuted
 import com.plotmap.app.core.designsystem.components.AuthFields
+import com.plotmap.app.core.designsystem.components.ManuscriptBackground
 import com.plotmap.app.core.designsystem.components.NextButton
+import com.plotmap.app.core.designsystem.components.PlotMapSecondaryButton
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -64,25 +67,69 @@ fun AuthScreen(
         }
     }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    ManuscriptBackground {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            AuthBody(
+                isLoginMode = isLoginMode,
+                onSwitchMode = { isLoginMode = it },
+                uiState = uiState,
+                email = email,
+                userName = userName,
+                password = password,
+                passwordRepeat = passwordRepeat,
+                passwordErrorMessage = passwordErrorMessage,
+                isPasswordValid = isPasswordValid,
+                isPasswordRepeatValid = isPasswordRepeatValid,
+                onEmailChange = { email = it },
+                onUserNameChange = { userName = it },
+                onPasswordChange = { password = it },
+                onPasswordRepeatChange = { passwordRepeat = it },
+                onLogin = { viewModel.login(userName, password) },
+                onRegister = { viewModel.register(email, userName, password) },
+                onDebugLogin = { onLoginSuccess("TestUser", false) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AuthBody(
+    isLoginMode: Boolean,
+    onSwitchMode: (Boolean) -> Unit,
+    uiState: AuthUiState,
+    email: String,
+    userName: String,
+    password: String,
+    passwordRepeat: String,
+    passwordErrorMessage: String?,
+    isPasswordValid: Boolean,
+    isPasswordRepeatValid: Boolean,
+    onEmailChange: (String) -> Unit,
+    onUserNameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onPasswordRepeatChange: (String) -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit,
+    onDebugLogin: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         if (isLoginMode) {
-            Text("Вход", color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.headlineMedium)
+            Text("Вход", color = GoldBright, style = MaterialTheme.typography.headlineMedium)
             AuthFields.LoginFields(
                 userName = userName,
                 password = password,
-                onUserNameChange = { userName = it },
-                onPasswordChange = { password = it },
+                onUserNameChange = onUserNameChange,
+                onPasswordChange = onPasswordChange,
             )
             NextButton(
-                onClick = { viewModel.login(userName, password) },
+                onClick = onLogin,
                 modifier = Modifier.padding(top = 24.dp),
                 enabled = userName.isNotBlank() && password.isNotBlank() && !uiState.isLoading,
             )
@@ -95,21 +142,18 @@ fun AuthScreen(
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                "Регистрация через VK или Google",
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+            Text("Регистрация через VK или Google", color = TextMuted)
             Text(
                 "Нет аккаунта? Зарегистрируйтесь",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                color = LavenderLight,
                 style = MaterialTheme.typography.bodySmall,
                 modifier =
                     Modifier
                         .padding(top = 16.dp)
-                        .clickable { isLoginMode = false },
+                        .clickable { onSwitchMode(false) },
             )
         } else {
-            Text("Регистрация", color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.headlineMedium)
+            Text("Регистрация", color = GoldBright, style = MaterialTheme.typography.headlineMedium)
             AuthFields.RegistrationFields(
                 email = email,
                 userName = userName,
@@ -119,13 +163,13 @@ fun AuthScreen(
                 passwordErrorMessage = passwordErrorMessage,
                 isPasswordValid = isPasswordValid,
                 isPasswordRepeatValid = isPasswordRepeatValid,
-                onEmailChange = { email = it },
-                onUserNameChange = { userName = it },
-                onPasswordChange = { password = it },
-                onPasswordRepeatChange = { passwordRepeat = it },
+                onEmailChange = onEmailChange,
+                onUserNameChange = onUserNameChange,
+                onPasswordChange = onPasswordChange,
+                onPasswordRepeatChange = onPasswordRepeatChange,
             )
             NextButton(
-                onClick = { viewModel.register(email, userName, password) },
+                onClick = onRegister,
                 modifier = Modifier.padding(top = 24.dp),
                 enabled = isPasswordValid && isPasswordRepeatValid && email.isNotBlank() && userName.isNotBlank() && !uiState.isLoading,
             )
@@ -138,23 +182,17 @@ fun AuthScreen(
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                "Регистрация через VK или Google",
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+            Text("Регистрация через VK или Google", color = TextMuted)
             Text(
                 "Уже есть аккаунт? Войдите",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                color = LavenderLight,
                 style = MaterialTheme.typography.bodySmall,
                 modifier =
                     Modifier
                         .padding(top = 16.dp)
-                        .clickable { isLoginMode = true },
+                        .clickable { onSwitchMode(true) },
             )
         }
         Spacer(modifier = Modifier.height(48.dp))
-        Button(onClick = { onLoginSuccess("TestUser", false) }) {
-            Text("DEBUG: Войти как TestUser")
-        }
     }
 }

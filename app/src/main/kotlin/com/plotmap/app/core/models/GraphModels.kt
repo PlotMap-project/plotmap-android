@@ -7,9 +7,24 @@ const val EVENT_SHORT_DESCRIPTION_MAX = 60
 const val EVENT_IMPACT_MIN = 1
 const val EVENT_IMPACT_MAX = 10
 
-enum class EditorTab { GRAPH, CHARACTERS }
+enum class EditorTab { GRAPH, CHARACTERS, MANUSCRIPT }
+
+enum class ManuscriptAlign { START, CENTER, END, JUSTIFY }
 
 enum class EditorMode { MANUAL, AI_READONLY }
+
+data class ManuscriptChapter(
+    val id: String = UUID.randomUUID().toString(),
+    val order: Int = 1,
+    val title: String? = null,
+    val text: String = "",
+    val bold: List<Boolean> = emptyList(),
+    val italic: List<Boolean> = emptyList(),
+    val align: ManuscriptAlign = ManuscriptAlign.START,
+    val locked: Boolean = false,
+    val loaded: Boolean = false,
+    val serverBacked: Boolean = false,
+)
 
 enum class CharacterSignificance { MAIN, SECONDARY, EPISODIC }
 
@@ -27,6 +42,18 @@ data class EditorEvent(
     val position: Offset? = null,
     val colorArgb: Long? = null,
     val isManuallyPositioned: Boolean = false,
+    val level: Int? = null,
+    val orderInLevel: Int? = null,
+)
+
+data class EditorGraph(
+    val projectId: String,
+    val title: String,
+    val events: List<EditorEvent>,
+    val connections: List<EditorConnection>,
+    val characters: List<EditorCharacter> = emptyList(),
+    val description: String = "",
+    val sourceText: String = "",
 )
 
 data class EditorConnection(
@@ -62,25 +89,25 @@ data class DefaultTagSpec(
 
 val DEFAULT_TAG_SPECS =
     listOf(
-        DefaultTagSpec("tag_inciting", "INCITING_INCIDENT", 0xFFA83F39L),
-        DefaultTagSpec("tag_rising", "RISING_ACTION", 0xFFC4853AL),
-        DefaultTagSpec("tag_climax", "CLIMAX", 0xFF8E3B6BL),
-        DefaultTagSpec("tag_falling", "FALLING_ACTION", 0xFF4A6FA5L),
-        DefaultTagSpec("tag_resolution", "RESOLUTION", 0xFF5A8A55L),
-        DefaultTagSpec("tag_twist", "PLOT_TWIST", 0xFF7A4FA3L),
-        DefaultTagSpec("tag_regular", "REGULAR", 0xFF947158L),
+        DefaultTagSpec("tag_inciting", "INCITING_INCIDENT", 0xFFCC2244L),
+        DefaultTagSpec("tag_rising", "RISING_ACTION", 0xFFB8860BL),
+        DefaultTagSpec("tag_climax", "CLIMAX", 0xFF9B1DCAL),
+        DefaultTagSpec("tag_falling", "FALLING_ACTION", 0xFF2E5FAAL),
+        DefaultTagSpec("tag_resolution", "RESOLUTION", 0xFF1E7B45L),
+        DefaultTagSpec("tag_twist", "PLOT_TWIST", 0xFFD4278CL),
+        DefaultTagSpec("tag_regular", "REGULAR", 0xFF6B5A8EL),
     )
 
 val EVENT_TAG_PALETTE =
     listOf(
-        0xFFA83F39L,
-        0xFFC4853AL,
-        0xFF8E3B6BL,
-        0xFF4A6FA5L,
-        0xFF5A8A55L,
-        0xFF7A4FA3L,
-        0xFF947158L,
-        0xFF3D2917L,
+        0xFFCC2244L,
+        0xFFB8860BL,
+        0xFF9B1DCAL,
+        0xFF2E5FAAL,
+        0xFF1E7B45L,
+        0xFFD4278CL,
+        0xFF6B5A8EL,
+        0xFF3E2B7AL,
     )
 
 fun EditorConnectionType.toApiValue(): String =
@@ -88,4 +115,18 @@ fun EditorConnectionType.toApiValue(): String =
         EditorConnectionType.CAUSAL -> "CAUSAL"
         EditorConnectionType.TEMPORAL -> "TEMPORAL"
         EditorConnectionType.PARALLEL -> "PARALLEL"
+    }
+
+fun editorConnectionTypeFromApi(value: String): EditorConnectionType =
+    when (value.uppercase()) {
+        "TEMPORAL" -> EditorConnectionType.TEMPORAL
+        "PARALLEL" -> EditorConnectionType.PARALLEL
+        else -> EditorConnectionType.CAUSAL
+    }
+
+fun characterSignificanceFromApi(value: String?): CharacterSignificance =
+    when (value?.uppercase()) {
+        "PROTAGONIST", "MAJOR" -> CharacterSignificance.MAIN
+        "EPISODIC" -> CharacterSignificance.EPISODIC
+        else -> CharacterSignificance.SECONDARY
     }

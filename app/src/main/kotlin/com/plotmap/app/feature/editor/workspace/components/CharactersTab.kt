@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.plotmap.app.R
+import com.plotmap.app.core.designsystem.WineText
 import com.plotmap.app.core.models.EditorCharacter
 
 @Composable
@@ -69,7 +70,7 @@ fun CharactersTab(
                         Text(
                             text = character.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -93,7 +94,7 @@ fun CharactersTab(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = WineText,
                         )
                     }
                 }

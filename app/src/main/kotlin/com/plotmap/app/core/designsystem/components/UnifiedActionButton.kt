@@ -1,9 +1,8 @@
 package com.plotmap.app.core.designsystem.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.plotmap.app.core.designsystem.MilkChocolateCard
-import com.plotmap.app.core.designsystem.PaperBeige
 
 @Composable
 fun UnifiedActionButton(
@@ -12,12 +11,10 @@ fun UnifiedActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    ActionButton(
+    PlotMapPrimaryButton(
         text = text,
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         enabled = enabled,
-        containerColor = MilkChocolateCard,
-        contentColor = PaperBeige,
     )
 }

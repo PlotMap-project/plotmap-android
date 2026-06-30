@@ -16,13 +16,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.plotmap.app.R
-import com.plotmap.app.core.designsystem.LocalIsDarkTheme
-import com.plotmap.app.core.designsystem.MilkChocolateCard
-import com.plotmap.app.core.designsystem.TotalWhite
+import com.plotmap.app.core.designsystem.BorderThin
+import com.plotmap.app.core.designsystem.GoldBright
+import com.plotmap.app.core.designsystem.OnBackground
+import com.plotmap.app.core.designsystem.SurfaceVariant
+import com.plotmap.app.core.designsystem.TextMuted
 
 object AuthFields {
     private val fieldModifier = Modifier.fillMaxWidth().padding(top = 12.dp)
-    private val fieldShape = RoundedCornerShape(18.dp)
+    private val fieldShape = RoundedCornerShape(12.dp)
 
     @Composable
     fun LoginFields(
@@ -119,12 +121,17 @@ object AuthFields {
         visualTransformation: VisualTransformation = VisualTransformation.None,
         isError: Boolean = false,
     ) {
-        val isDarkTheme = LocalIsDarkTheme.current
-        val containerColor = if (isDarkTheme) MilkChocolateCard else TotalWhite
         val fieldColors =
             OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = containerColor,
-                unfocusedContainerColor = containerColor,
+                focusedContainerColor = SurfaceVariant,
+                unfocusedContainerColor = SurfaceVariant,
+                focusedBorderColor = GoldBright,
+                unfocusedBorderColor = BorderThin,
+                focusedLabelColor = GoldBright,
+                unfocusedLabelColor = TextMuted,
+                cursorColor = GoldBright,
+                focusedTextColor = OnBackground,
+                unfocusedTextColor = OnBackground,
             )
 
         OutlinedTextField(
